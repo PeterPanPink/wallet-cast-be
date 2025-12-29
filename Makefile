@@ -183,11 +183,6 @@ local-clean:
 
 # Start admin console
 console:
-	@echo "🖥️  Starting CW Console..."
-	@echo "📍 Console will be available at: http://localhost:8998"
-	@echo "🔌 Connecting to API at: http://localhost:8999/api/v1"
-	@echo ""
-	@echo "Make sure the API is running first:"
+	@echo "🖥️  Developer console is not included in this public demo repository."
+	@echo "Start the API locally with:"
 	@echo "  make local-up"
-	@echo ""
-	@python3 tools/cw_console/run.py

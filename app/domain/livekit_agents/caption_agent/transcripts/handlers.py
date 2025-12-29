@@ -22,10 +22,10 @@ from typing import TYPE_CHECKING
 from livekit import rtc
 from loguru import logger
 
-from app.cw.storage.mongo import get_mongo_client
+from app.shared.storage.mongo import get_mongo_client
 from app.schemas import Transcript
 from app.schemas.init import init_beanie_odm
-from app.services.cw_translator import TranslatorService
+from app.services.integrations.translator_service import TranslatorService
 
 if TYPE_CHECKING:
     pass

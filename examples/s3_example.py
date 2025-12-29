@@ -10,7 +10,7 @@ This example demonstrates how to:
 
 import asyncio
 
-from app.services.cw_s3 import s3_service
+from app.services.integrations.s3_storage import s3_service
 
 
 async def main() -> None:

@@ -37,7 +37,7 @@ async def enable_subtitle(
     enable_tts: bool = False,
 ):
     """Enable subtitle or translation for a session."""
-    url = f"{API_BASE_URL}/flc/session/subtitle/enable"
+    url = f"{API_BASE_URL}/session/subtitle/enable"
 
     payload = {
         "room_id": room_id,
@@ -68,7 +68,7 @@ async def enable_subtitle(
 
 async def disable_subtitle(room_id: str):
     """Disable subtitle for a session."""
-    url = f"{API_BASE_URL}/flc/session/subtitle/disable"
+    url = f"{API_BASE_URL}/session/subtitle/disable"
 
     payload = {"room_id": room_id}
 
@@ -91,7 +91,7 @@ async def disable_subtitle(room_id: str):
 
 async def get_status(room_id: str):
     """Get subtitle status for a session."""
-    url = f"{API_BASE_URL}/flc/session/subtitle/status"
+    url = f"{API_BASE_URL}/session/subtitle/status"
 
     payload = {"room_id": room_id}
 

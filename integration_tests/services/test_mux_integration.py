@@ -11,8 +11,8 @@ import re
 
 import pytest
 
-from app.services.cbx_live.cbx_live_schemas import ChannelConfig, SessionConfig
-from app.services.cw_mux import MuxService
+from app.services.integrations.external_live.external_live_schemas import ChannelConfig, SessionConfig
+from app.services.integrations.mux_service import MuxService
 
 
 @pytest.mark.integration

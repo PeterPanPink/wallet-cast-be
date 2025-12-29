@@ -65,7 +65,7 @@ Verify that your wrapper correctly handles SDK exceptions and formats data.
 
 ```python
 from unittest.mock import AsyncMock, patch
-from app.services.cw_livekit import LiveKitService
+from app.services.integrations.livekit_service import LiveKitService
 
 async def test_create_room_error_handling():
     # Arrange

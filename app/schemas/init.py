@@ -6,7 +6,7 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from app.schemas.channel import Channel
 from app.schemas.session import Session
 from app.schemas.transcript import Transcript
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 
 async def init_beanie_odm(
@@ -22,10 +22,10 @@ async def init_beanie_odm(
     """
     if isinstance(mongo_client, AsyncIOMotorClient):
         if not database_name:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg="database_name required when passing AsyncIOMotorClient",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
         database = mongo_client[database_name]
     else:

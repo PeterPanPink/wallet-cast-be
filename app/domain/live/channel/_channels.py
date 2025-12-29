@@ -6,10 +6,10 @@ from typing import Any
 from bson import ObjectId
 from loguru import logger
 
-from app.cw.domain.entity_change import dt_to_ms, utc_now
+from app.shared.domain.entity_change import dt_to_ms, utc_now
 from app.schemas import Channel
 from app.schemas.user_configs import UserConfigs
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from ...utils.idgen import new_channel_id
 from ._base import BaseService
@@ -32,19 +32,19 @@ class ChannelOperations(BaseService):
         """
         Create a channel for the requesting user.
 
-        Returns ChannelResponse on success, raises FlcError on validation errors.
+        Returns ChannelResponse on success, raises AppError on validation errors.
         """
         if not params.title:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg="Title is required",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
         if not params.location:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg="Location is required",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
 
         channel_id = new_channel_id()
@@ -79,10 +79,10 @@ class ChannelOperations(BaseService):
         Update channel metadata for the given user.
 
         When title, description, or cover are updated, also updates all active
-        sessions for this channel and synchronizes with CBX Live platform if needed.
+        sessions for this channel and synchronizes with External Live platform if needed.
 
         Returns ChannelResponse.
-        Raises FlcError if channel not found/unauthorized.
+        Raises AppError if channel not found/unauthorized.
         Raises ValueError for validation errors.
         """
         # Find the channel
@@ -92,10 +92,10 @@ class ChannelOperations(BaseService):
         )
         if not channel:
             logger.warning(f"Channel {channel_id} not found for user {user_id}")
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Track changes for legacy audit
@@ -137,7 +137,7 @@ class ChannelOperations(BaseService):
         Get a single channel by ID with optional user ownership check.
 
         Returns ChannelResponse.
-        Raises FlcError if channel not found.
+        Raises AppError if channel not found.
         """
         query_conditions = [Channel.channel_id == channel_id]
         if user_id:
@@ -145,10 +145,10 @@ class ChannelOperations(BaseService):
 
         channel = await Channel.find_one(*query_conditions)
         if not channel:
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return ChannelResponse(**channel.model_dump(exclude={"id"}, mode="json"))
@@ -255,10 +255,10 @@ class ChannelOperations(BaseService):
             Channel.user_id == user_id,
         )
         if not channel:
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         if not channel.user_configs:
@@ -279,10 +279,10 @@ class ChannelOperations(BaseService):
             Channel.user_id == user_id,
         )
         if not channel:
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         if not channel.user_configs:
@@ -306,12 +306,12 @@ class ChannelOperations(BaseService):
         updates: dict[str, Any],
         changed_fields: set[str],
     ) -> None:
-        """Sync title, description, cover changes to active sessions and CBX Live.
+        """Sync title, description, cover changes to active sessions and External Live.
 
         This method:
         1. Finds all active sessions for the channel
         2. Updates their title, description, and cover fields
-        3. Syncs to CBX Live if the session has a post_id
+        3. Syncs to External Live if the session has a post_id
         """
         from beanie.operators import In
 
@@ -363,35 +363,35 @@ class ChannelOperations(BaseService):
                     f"from channel {channel_id}"
                 )
 
-                # Sync to CBX Live if the session has a post_id (is live)
+                # Sync to External Live if the session has a post_id (is live)
                 if session.runtime and session.runtime.post_id:
-                    await self._sync_session_to_cbx_live(session)
+                    await self._sync_session_to_external_live(session)
 
-    async def _sync_session_to_cbx_live(self, session) -> None:
-        """Sync session metadata to CBX Live platform."""
+    async def _sync_session_to_external_live(self, session) -> None:
+        """Sync session metadata to External Live platform."""
         from app.app_config import get_app_environ_config
-        from app.services.cbx_live.cbx_live_client import CbxLiveClient
-        from app.services.cbx_live.cbx_live_schemas import AdminUpdateLiveBody
+        from app.services.integrations.external_live.external_live_client import ExternalLiveClient
+        from app.services.integrations.external_live.external_live_schemas import AdminUpdateLiveBody
 
         config = get_app_environ_config()
-        if not config.CBX_LIVE_BASE_URL:
-            logger.debug("CBX_LIVE_BASE_URL not configured, skipping CBX sync")
+        if not config.EXTERNAL_LIVE_BASE_URL:
+            logger.debug("EXTERNAL_LIVE_BASE_URL not configured, skipping External Live sync")
             return
 
         post_id = session.runtime.post_id if session.runtime else None
         if not post_id:
-            logger.debug(f"No post_id for session {session.session_id}, skipping CBX sync")
+            logger.debug(f"No post_id for session {session.session_id}, skipping External Live sync")
             return
 
         try:
-            client = CbxLiveClient(
-                base_url=config.CBX_LIVE_BASE_URL,
-                api_key=config.CBX_LIVE_API_KEY,
+            client = ExternalLiveClient(
+                base_url=config.EXTERNAL_LIVE_BASE_URL,
+                api_key=config.EXTERNAL_LIVE_API_KEY,
             )
 
             # Log session data before creating body
             logger.debug(
-                f"Session data before CBX sync - session_id={session.session_id}, "
+                f"Session data before External Live sync - session_id={session.session_id}, "
                 f"title={session.title!r}, description={session.description!r}, "
                 f"cover={session.cover!r}"
             )
@@ -409,15 +409,15 @@ class ChannelOperations(BaseService):
             # Log the serialized body that will be sent
             serialized_body = body.model_dump(exclude_none=True)
             logger.info(
-                f"📤 Calling CBX admin/live/update for session {session.session_id}, "
+                f"📤 Calling External Live admin/live/update for session {session.session_id}, "
                 f"post_id={post_id}, body={serialized_body}"
             )
             await client.admin_update_live(body)
-            logger.info(f"✅ CBX update_live completed for post_id: {post_id}")
+            logger.info(f"✅ External Live update_live completed for post_id: {post_id}")
 
         except Exception as e:
             # Log error but don't fail the channel update
             logger.error(
-                f"Failed to sync session {session.session_id} to CBX Live: {e}",
+                f"Failed to sync session {session.session_id} to External Live: {e}",
                 exc_info=True,
             )

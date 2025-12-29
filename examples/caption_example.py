@@ -37,7 +37,7 @@ async def enable_caption(
     enable_tts: bool = False,
 ):
     """Enable caption or translation for a session."""
-    url = f"{API_BASE_URL}/flc/session/caption/enable"
+    url = f"{API_BASE_URL}/session/caption/enable"
 
     payload = {
         "room_id": room_id,
@@ -68,7 +68,7 @@ async def enable_caption(
 
 async def disable_caption(room_id: str):
     """Disable caption for a session."""
-    url = f"{API_BASE_URL}/flc/session/caption/disable"
+    url = f"{API_BASE_URL}/session/caption/disable"
 
     payload = {"room_id": room_id}
 
@@ -91,7 +91,7 @@ async def disable_caption(room_id: str):
 
 async def get_status(room_id: str):
     """Get caption status for a session."""
-    url = f"{API_BASE_URL}/flc/session/caption/status"
+    url = f"{API_BASE_URL}/session/caption/status"
 
     payload = {"room_id": room_id}
 

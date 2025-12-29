@@ -5,7 +5,7 @@ import pytest
 from app.domain.live.channel.channel_domain import ChannelService
 from app.domain.live.channel.channel_models import ChannelCreateParams
 from app.schemas import Channel
-from app.utils.flc_errors import FlcError
+from app.utils.app_errors import AppError
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -69,27 +69,27 @@ class TestCreateChannel:
     async def test_create_channel_missing_title_raises_error(
         self, beanie_db, service: ChannelService
     ):
-        """Test that missing title raises FlcError."""
+        """Test that missing title raises AppError."""
         params = ChannelCreateParams(
             user_id="user_789",
             title=None,
             location="US",
         )
 
-        with pytest.raises(FlcError, match="Title is required"):
+        with pytest.raises(AppError, match="Title is required"):
             await service.create_channel(params)
 
     async def test_create_channel_missing_location_raises_error(
         self, beanie_db, service: ChannelService
     ):
-        """Test that missing location raises FlcError."""
+        """Test that missing location raises AppError."""
         params = ChannelCreateParams(
             user_id="user_789",
             title="Test Channel",
             location=None,
         )
 
-        with pytest.raises(FlcError, match="Location is required"):
+        with pytest.raises(AppError, match="Location is required"):
             await service.create_channel(params)
 
     async def test_create_multiple_channels_same_user(self, beanie_db, service: ChannelService):

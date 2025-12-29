@@ -6,7 +6,7 @@ import pytest
 
 from app.schemas import Session, SessionState
 from app.schemas.session_runtime import SessionRuntime
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -78,7 +78,7 @@ class TestSaveSessionWithVersionCheck:
         assert saved.version == 3
 
     async def test_save_session_version_conflict(self, beanie_db):
-        """Test version conflict raises FlcError when another update occurred."""
+        """Test version conflict raises AppError when another update occurred."""
         # Arrange
         session = Session(
             session_id="se_conflict",
@@ -104,10 +104,10 @@ class TestSaveSessionWithVersionCheck:
         session.status = SessionState.PUBLISHING
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.save_session_with_version_check()
 
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_VERSION_CONFLICT
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_VERSION_CONFLICT
         assert "Version conflict" in exc_info.value.errmesg
 
     async def test_save_session_backward_compatibility_none_version(self, beanie_db):
@@ -251,7 +251,7 @@ class TestSaveSessionWithVersionCheck:
         )
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.save_session_with_version_check()
 
         error = exc_info.value
@@ -319,12 +319,12 @@ class TestPartialUpdateSessionWithVersionCheck:
             {"$set": {"version": 2}},
         )
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.partial_update_session_with_version_check(
                 {Session.status: SessionState.LIVE},
             )
 
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_VERSION_CONFLICT
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_VERSION_CONFLICT
 
     async def test_partial_update_backward_compatibility_none_version(self, beanie_db):
         """Test partial update for session with missing version field."""
@@ -358,7 +358,7 @@ class TestPartialUpdateSessionWithVersionCheck:
         assert saved.version == 2
 
     async def test_partial_update_rejects_version_in_updates(self, beanie_db):
-        """Test that providing Session.version in updates raises FlcError."""
+        """Test that providing Session.version in updates raises AppError."""
         session = Session(
             session_id="se_version_in_updates",
             room_id="version-in-updates-room",
@@ -372,16 +372,16 @@ class TestPartialUpdateSessionWithVersionCheck:
         )
         await session.insert()
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.partial_update_session_with_version_check(
                 {Session.version: 99},
             )
 
-        assert exc_info.value.errcode == FlcErrorCode.E_INVALID_REQUEST
+        assert exc_info.value.errcode == AppErrorCode.E_INVALID_REQUEST
         assert "updates must not include Session.version" in exc_info.value.errmesg
 
     async def test_partial_update_rejects_invalid_max_retry(self, beanie_db):
-        """Test that max_retry_on_conflicts outside 0-10 raises FlcError."""
+        """Test that max_retry_on_conflicts outside 0-10 raises AppError."""
         session = Session(
             session_id="se_invalid_retry",
             room_id="invalid-retry-room",
@@ -395,24 +395,24 @@ class TestPartialUpdateSessionWithVersionCheck:
         )
         await session.insert()
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.partial_update_session_with_version_check(
                 {Session.title: "New Title"},
                 max_retry_on_conflicts=11,
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_INVALID_REQUEST
+        assert exc_info.value.errcode == AppErrorCode.E_INVALID_REQUEST
         assert "max_retry_on_conflicts must be between 0 and 10" in exc_info.value.errmesg
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.partial_update_session_with_version_check(
                 {Session.title: "New Title"},
                 max_retry_on_conflicts=-1,
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_INVALID_REQUEST
+        assert exc_info.value.errcode == AppErrorCode.E_INVALID_REQUEST
         assert "max_retry_on_conflicts must be between 0 and 10" in exc_info.value.errmesg
 
     async def test_partial_update_rejects_retry_with_status_field(self, beanie_db):
-        """Test that status updates with retries raise FlcError (status is critical)."""
+        """Test that status updates with retries raise AppError (status is critical)."""
         session = Session(
             session_id="se_status_no_retry",
             room_id="status-no-retry-room",
@@ -426,13 +426,13 @@ class TestPartialUpdateSessionWithVersionCheck:
         )
         await session.insert()
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.partial_update_session_with_version_check(
                 {Session.status: SessionState.READY},
                 max_retry_on_conflicts=1,
             )
 
-        assert exc_info.value.errcode == FlcErrorCode.E_INVALID_REQUEST
+        assert exc_info.value.errcode == AppErrorCode.E_INVALID_REQUEST
         assert "retries not allowed when updating status" in exc_info.value.errmesg
 
     async def test_partial_update_allows_status_with_zero_retry(self, beanie_db):
@@ -568,7 +568,7 @@ class TestPartialUpdateWithRetry:
 
         with (
             patch.object(Session, "get", side_effect=get_and_bump),
-            pytest.raises(FlcError) as exc_info,
+            pytest.raises(AppError) as exc_info,
         ):
             # Try with limited retries - should fail
             await session.partial_update_session_with_version_check(
@@ -576,7 +576,7 @@ class TestPartialUpdateWithRetry:
                 max_retry_on_conflicts=2,  # 3 total attempts
             )
 
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_VERSION_CONFLICT
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_VERSION_CONFLICT
 
     async def test_retry_zero_means_no_retry(self, beanie_db):
         """Test that max_retry_on_conflicts=0 means no retry (default behavior)."""
@@ -601,13 +601,13 @@ class TestPartialUpdateWithRetry:
         )
 
         # Try with no retry - should fail immediately
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await session.partial_update_session_with_version_check(
                 {Session.status: SessionState.READY},
                 max_retry_on_conflicts=0,
             )
 
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_VERSION_CONFLICT
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_VERSION_CONFLICT
 
     async def test_retry_success_on_last_attempt(self, beanie_db):
         """Test successful update on the last retry attempt."""

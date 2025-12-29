@@ -5,8 +5,8 @@ from fastapi import APIRouter, Depends
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationError
 
-from app.cw.api.errors import E_INVALID_PARAMS
-from app.cw.api.utils import ApiFailure, ApiSuccess, api_failure, verify_api_key
+from app.shared.api.errors import E_INVALID_PARAMS
+from app.shared.api.utils import ApiFailure, ApiSuccess, api_failure, verify_api_key
 
 router = APIRouter()
 
@@ -47,10 +47,10 @@ enable: false
 
 # Data check rules
 rules:
-  - name: 01-host-info-from-cbe-user-to-flc-host
+  - name: 01-host-info-from-core_api-user-to-api-host
     source:
       find_data:
-        collection: cbe_replica.user
+        collection: core_api_replica.user
         query_keys: _id
       save_data:
         path: $$
@@ -72,7 +72,7 @@ rules:
             udate:     $$val.udate
     target:
       find_data:
-        collection: flc_primary.flc_host
+        collection: demo_primary.api_host
         query_keys: user_id
       save_data:
         path: $$
@@ -92,10 +92,10 @@ rules:
             dsc:       $$val.dsc
             cdate:     $$val.cdate
             udate:     $$val.udate
-  - name: 02-host-auth-from-cbe-user-to-flc-auth
+  - name: 02-host-auth-from-core_api-user-to-api-auth
     source:
       find_data:
-        collection: cbe_replica.user
+        collection: core_api_replica.user
         query_keys: _id
       save_data:
         path: $$
@@ -109,7 +109,7 @@ rules:
             fg_app_disabled: $$val.fg_app_disabled
     target:
       find_data:
-        collection: flc_primary.flc_auth
+        collection: demo_primary.api_auth
         query_keys: user_id
       save_data:
         path: $$
@@ -120,10 +120,10 @@ rules:
             roles:           $$val.roles
             udate:           $$val.udate
             fg_app_disabled: $$val.fg_app_disabled
-  - name: 03-lv-configs-from-cbe-user-to-flc-channel
+  - name: 03-lv-configs-from-core_api-user-to-api-channel
     source:
       find_data:
-        collection: cbe_replica.user
+        collection: core_api_replica.user
         query_keys: _id
       save_data:
         path: lv_configs.channelConfigs
@@ -141,7 +141,7 @@ rules:
             lang:         $$val.lang
     target:
       find_data:
-        collection: flc_primary.flc_channel
+        collection: demo_primary.channels
         query_keys: user_id
       save_data:
         path: $$
@@ -157,7 +157,7 @@ rules:
             lang:         $$val.lang
             location:     $$val.location
             title:        $$val.title
-  - name: 04-channel-from-lvm-channels-to-flc-channel
+  - name: 04-channel-from-lvm-channels-to-api-channel
     source:
       find_data:
         collection: lvm_replica.channels
@@ -175,7 +175,7 @@ rules:
             live_stream_id: $$val.metadata.liveStreamId
     target:
       find_data:
-        collection: flc_primary.flc_channel
+        collection: demo_primary.channels
         query_keys: user_id
       save_data:
         path: configs.mux

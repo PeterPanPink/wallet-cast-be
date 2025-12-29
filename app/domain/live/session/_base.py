@@ -3,12 +3,12 @@
 from beanie.operators import In
 from loguru import logger
 
-from app.cw.domain.entity_change import utc_now
+from app.shared.domain.entity_change import utc_now
 from app.schemas import Session, SessionState
 from app.schemas.session_runtime import SessionRuntime
-from app.services.cw_livekit import livekit_service
-from app.services.cw_mux import mux_service
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.services.integrations.livekit_service import livekit_service
+from app.services.integrations.mux_service import mux_service
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from .session_state_machine import SessionStateMachine
 
@@ -89,10 +89,10 @@ class BaseService:
             return session
 
         if not SessionStateMachine.can_transition(session.status, new_state):
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg=f"Invalid state transition: {session.status} -> {new_state}",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
 
         # Update state

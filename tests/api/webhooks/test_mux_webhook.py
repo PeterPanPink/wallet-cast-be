@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.api.webhooks.mux import _parse_passthrough, router, verify_mux_signature
 from app.api.webhooks.schemas.mux import LiveStreamActiveEvent
-from app.utils.flc_errors import FlcError
+from app.utils.app_errors import AppError
 
 
 class TestVerifyMuxSignature:
@@ -73,8 +73,8 @@ class TestVerifyMuxSignature:
 
         signature_header = f"t={timestamp},v1={signature}"
 
-        # Should raise FlcError due to timestamp tolerance (default 300 seconds)
-        with pytest.raises(FlcError, match="Timestamp outside tolerance"):
+        # Should raise AppError due to timestamp tolerance (default 300 seconds)
+        with pytest.raises(AppError, match="Timestamp outside tolerance"):
             verify_mux_signature(
                 payload=payload,
                 signature_header=signature_header,
@@ -87,7 +87,7 @@ class TestVerifyMuxSignature:
         signing_secret = "test_secret"
 
         # Missing v1
-        with pytest.raises(FlcError, match="Invalid signature header format"):
+        with pytest.raises(AppError, match="Invalid signature header format"):
             verify_mux_signature(
                 payload=payload,
                 signature_header="t=123456789",
@@ -95,7 +95,7 @@ class TestVerifyMuxSignature:
             )
 
         # Missing t
-        with pytest.raises(FlcError, match="Invalid signature header format"):
+        with pytest.raises(AppError, match="Invalid signature header format"):
             verify_mux_signature(
                 payload=payload,
                 signature_header="v1=abc123",
@@ -339,7 +339,7 @@ class TestHandleAssetReady:
         """Mock app config for MUX_STREAM_BASE_URL."""
         with patch("app.api.webhooks.mux.get_app_environ_config") as mock:
             mock.return_value.MUX_STREAM_BASE_URL = "https://stream.mux.com"
-            mock.return_value.CBX_LIVE_BASE_URL = None  # Disable CBX integration
+            mock.return_value.EXTERNAL_LIVE_BASE_URL = None  # Disable External Live integration
             yield mock
 
     @pytest.fixture
@@ -446,7 +446,7 @@ class TestHandleAssetReady:
         mock_app_config,
         sample_asset_ready_event_data,
     ):
-        """Test that handle_asset_ready sets post_id from CBX integration."""
+        """Test that handle_asset_ready sets post_id from External Live integration."""
         from datetime import datetime, timezone
 
         from app.api.webhooks.mux import handle_asset_ready
@@ -483,17 +483,17 @@ class TestHandleAssetReady:
         event = AssetReadyEvent(**sample_asset_ready_event_data)
         result = await handle_asset_ready(event)
 
-        # Assert: Check result has cbx_post_id (mock post_id since CBX is not configured)
+        # Assert: Check result has external_live_post_id (mock post_id since External Live is not configured)
         assert result["handled"] is True
-        assert result["cbx_post_id"] is not None
-        assert result["cbx_post_id"].startswith("mock_")
+        assert result["external_live_post_id"] is not None
+        assert result["external_live_post_id"].startswith("mock_")
 
         # Assert: Verify post_id is saved in session
         saved_session = await Session.find_one(Session.session_id == "se_asset_ready_test")
         assert saved_session is not None
         assert saved_session.runtime.post_id is not None
         assert saved_session.runtime.post_id.startswith("mock_")
-        assert saved_session.runtime.post_id == result["cbx_post_id"]
+        assert saved_session.runtime.post_id == result["external_live_post_id"]
 
     async def test_handle_asset_ready_transitions_to_live(
         self,

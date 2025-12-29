@@ -8,7 +8,7 @@ import pytest
 from app.domain.live.session._end import EndSessionOperations
 from app.schemas import Session, SessionState
 from app.schemas.session_runtime import LiveKitRuntime, MuxRuntime, SessionRuntime
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -151,14 +151,14 @@ class TestEndSession:
         assert result.status == SessionState.STOPPED
 
     async def test_end_session_not_found(self, beanie_db):
-        """Test ending non-existent session raises FlcError."""
+        """Test ending non-existent session raises AppError."""
         # Arrange
         ops = EndSessionOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.end_session("se_nonexistent")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
     async def test_end_session_egress_stop_failure_continues(self, beanie_db):
         """Test that egress stop failure doesn't block state update."""

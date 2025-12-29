@@ -9,7 +9,7 @@ import pytest
 from app.domain.live.session._egress import EgressOperations
 from app.schemas import Channel, Session, SessionState
 from app.schemas.session_runtime import SessionRuntime
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 
 @dataclass
@@ -126,10 +126,10 @@ class TestStartLive:
         ops = EgressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.start_live(room_name="nonexistent-room")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
-        assert exc_info.value.status_code == FlcStatusCode.NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.status_code == HttpStatusCode.NOT_FOUND
 
     async def test_start_live_already_streaming(self, beanie_db):
         """Test start live fails when stream already in progress."""
@@ -149,10 +149,10 @@ class TestStartLive:
         await session.insert()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.start_live(room_name="already-live-room")
-        assert exc_info.value.errcode == FlcErrorCode.E_LIVE_STREAM_IN_PROGRESS
-        assert exc_info.value.status_code == FlcStatusCode.CONFLICT
+        assert exc_info.value.errcode == AppErrorCode.E_LIVE_STREAM_IN_PROGRESS
+        assert exc_info.value.status_code == HttpStatusCode.CONFLICT
 
     async def test_start_live_publishing_already_streaming(self, beanie_db):
         """Test start live fails when already in PUBLISHING state."""
@@ -172,10 +172,10 @@ class TestStartLive:
         await session.insert()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.start_live(room_name="publishing-room")
-        assert exc_info.value.errcode == FlcErrorCode.E_LIVE_STREAM_IN_PROGRESS
-        assert exc_info.value.status_code == FlcStatusCode.CONFLICT
+        assert exc_info.value.errcode == AppErrorCode.E_LIVE_STREAM_IN_PROGRESS
+        assert exc_info.value.status_code == HttpStatusCode.CONFLICT
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -237,14 +237,14 @@ class TestEndLive:
         ops = EgressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.end_live(
                 room_name="nonexistent-room",
                 egress_id="EG_test",
                 mux_stream_id="mux_test",
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
-        assert exc_info.value.status_code == FlcStatusCode.NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.status_code == HttpStatusCode.NOT_FOUND
 
     async def test_end_live_egress_already_complete(self, beanie_db):
         """Test end live handles egress already completed gracefully."""

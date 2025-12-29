@@ -13,37 +13,37 @@ from loguru import logger
 
 from app.app_config import get_app_environ_config
 from app.schemas import Session, SessionState
-from app.services.cbx_live.cbx_live_client import CbxLiveClient
-from app.services.cbx_live.cbx_live_schemas import AdminStopLiveBody
-from app.services.cw_mux import mux_service
+from app.services.integrations.external_live.external_live_client import ExternalLiveClient
+from app.services.integrations.external_live.external_live_schemas import AdminStopLiveBody
+from app.services.integrations.mux_service import mux_service
 
 # Default delay before checking Mux stream status (in seconds)
 DEFAULT_CLEANUP_DELAY_SECONDS = 60
 
 
-def _get_cbx_live_client() -> CbxLiveClient | None:
-    """Get CBX Live client if configured."""
+def _get_external_live_client() -> ExternalLiveClient | None:
+    """Get External Live client if configured."""
     config = get_app_environ_config()
-    if not config.CBX_LIVE_BASE_URL:
-        logger.debug("CBX_LIVE_BASE_URL not configured, skipping CBX integration")
+    if not config.EXTERNAL_LIVE_BASE_URL:
+        logger.debug("EXTERNAL_LIVE_BASE_URL not configured, skipping External Live integration")
         return None
-    logger.debug(f"Initializing CBX Live client: base_url={config.CBX_LIVE_BASE_URL}")
-    return CbxLiveClient(
-        base_url=config.CBX_LIVE_BASE_URL,
-        api_key=config.CBX_LIVE_API_KEY,
+    logger.debug(f"Initializing External Live client: base_url={config.EXTERNAL_LIVE_BASE_URL}")
+    return ExternalLiveClient(
+        base_url=config.EXTERNAL_LIVE_BASE_URL,
+        api_key=config.EXTERNAL_LIVE_API_KEY,
     )
 
 
-async def _call_cbx_stop_live(session: Session) -> bool:
-    """Call CBX Live admin/live/stop endpoint.
+async def _call_external_live_stop_live(session: Session) -> bool:
+    """Call External Live admin/live/stop endpoint.
 
     Args:
-        session: Session document with cbx_post_id in config
+        session: Session document with external_live_post_id in config
 
     Returns:
         True if successful, False otherwise
     """
-    client = _get_cbx_live_client()
+    client = _get_external_live_client()
     if not client:
         return False
 
@@ -53,12 +53,12 @@ async def _call_cbx_stop_live(session: Session) -> bool:
         post_id = config.post_id
 
         logger.debug(
-            f"Attempting CBX stop_live: session_id={session.session_id}, "
+            f"Attempting External Live stop_live: session_id={session.session_id}, "
             f"user_id={session.user_id}, post_id={post_id}"
         )
 
         if not post_id:
-            logger.warning(f"No cbx_post_id in session {session.session_id}, skipping stop_live")
+            logger.warning(f"No external_live_post_id in session {session.session_id}, skipping stop_live")
             return False
 
         body = AdminStopLiveBody(
@@ -67,15 +67,15 @@ async def _call_cbx_stop_live(session: Session) -> bool:
         )
 
         logger.info(
-            f"📤 Calling CBX admin/live/stop for session {session.session_id}, post_id={post_id}"
+            f"📤 Calling External Live admin/live/stop for session {session.session_id}, post_id={post_id}"
         )
-        logger.debug(f"CBX stop_live request body: {body.model_dump_json(indent=2)}")
+        logger.debug(f"External Live stop_live request body: {body.model_dump_json(indent=2)}")
         await client.admin_stop_live(body)
-        logger.info(f"✅ CBX stop_live completed for post_id: {post_id}")
+        logger.info(f"✅ External Live stop_live completed for post_id: {post_id}")
         return True
 
     except Exception as e:
-        logger.exception(f"Failed to call CBX admin/live/stop: {e}")
+        logger.exception(f"Failed to call External Live admin/live/stop: {e}")
         return False
 
 
@@ -122,7 +122,7 @@ async def delayed_stream_cleanup(
     This task:
     1. Waits for the specified delay
     2. Checks if the Mux live stream is still active
-    3. If not active, transitions the session to STOPPED and notifies CBX Live
+    3. If not active, transitions the session to STOPPED and notifies External Live
     4. Recreates a new READY session for the same room_id
 
     Args:
@@ -178,9 +178,9 @@ async def delayed_stream_cleanup(
                 f"Proceeding with cleanup for session {session_id}"
             )
 
-        # Step 4: Call CBX admin/live/stop before transitioning
-        cbx_stopped = await _call_cbx_stop_live(session)
-        logger.debug(f"CBX stop_live result for session {session_id}: {cbx_stopped}")
+        # Step 4: Call External Live admin/live/stop before transitioning
+        external_live_stopped = await _call_external_live_stop_live(session)
+        logger.debug(f"External Live stop_live result for session {session_id}: {external_live_stopped}")
 
         # Step 5: Transition session to STOPPED
         updated_session = await _transition_session_to_stopped(session)

@@ -3,7 +3,7 @@
 from loguru import logger
 
 from app.schemas import SessionState
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from ._base import BaseService
 from ._egress import EgressOperations
@@ -33,15 +33,15 @@ class EndSessionOperations(BaseService):
             SessionResponse with updated state
 
         Raises:
-            FlcError: If session not found or invalid state
+            AppError: If session not found or invalid state
         """
         # Get the session
         session = await self._get_session_by_id(session_id)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found: {session_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         logger.info(f"Ending session {session_id} (current state: {session.status})")
@@ -119,10 +119,10 @@ class EndSessionOperations(BaseService):
         # Refresh session to get latest state
         session = await self._get_session_by_id(session_id)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found after update: {session_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return SessionResponse(**session.model_dump(exclude={"id"}, mode="json"))

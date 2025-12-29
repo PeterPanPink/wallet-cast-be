@@ -11,7 +11,7 @@ from loguru import logger
 from pydantic import Field, field_validator
 from pymongo import IndexModel
 
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from .schema_utils import parse_mongo_datetime
 from .session_runtime import SessionRuntime
@@ -82,22 +82,22 @@ class Session(Document):
             f"version={fresh_session.version if fresh_session else 'N/A'}"
         )
         logger.warning(error_msg)
-        raise FlcError(
-            errcode=FlcErrorCode.E_SESSION_VERSION_CONFLICT,
+        raise AppError(
+            errcode=AppErrorCode.E_SESSION_VERSION_CONFLICT,
             errmesg=error_msg,
-            status_code=FlcStatusCode.CONFLICT,
+            status_code=HttpStatusCode.CONFLICT,
         )
 
     async def save_session_with_version_check(self) -> bool:
         """Save session with optimistic locking using version field.
 
-        Raises FlcError on version conflict.
+        Raises AppError on version conflict.
 
         Returns:
             True if save succeeded.
 
         Raises:
-            FlcError: If version conflict occurred (E_SESSION_VERSION_CONFLICT).
+            AppError: If version conflict occurred (E_SESSION_VERSION_CONFLICT).
         """
         # Initialize version if missing (for backward compatibility)
         if self.version is None:
@@ -149,28 +149,28 @@ class Session(Document):
             True if update succeeded.
 
         Raises:
-            FlcError: If version conflict occurred after all retries (E_SESSION_VERSION_CONFLICT),
+            AppError: If version conflict occurred after all retries (E_SESSION_VERSION_CONFLICT),
                 or if updates include Session.version or max_retry_on_conflicts is invalid (E_INVALID_REQUEST).
         """
         if Session.version in updates:
-            raise FlcError(
-                FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                AppErrorCode.E_INVALID_REQUEST,
                 "updates must not include Session.version",
-                FlcStatusCode.BAD_REQUEST,
+                HttpStatusCode.BAD_REQUEST,
             )
 
         if Session.status in updates and max_retry_on_conflicts > 0:
-            raise FlcError(
-                FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                AppErrorCode.E_INVALID_REQUEST,
                 "retries not allowed when updating status (critical field)",
-                FlcStatusCode.BAD_REQUEST,
+                HttpStatusCode.BAD_REQUEST,
             )
 
         if max_retry_on_conflicts < 0 or max_retry_on_conflicts > 10:
-            raise FlcError(
-                FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                AppErrorCode.E_INVALID_REQUEST,
                 "max_retry_on_conflicts must be between 0 and 10",
-                FlcStatusCode.BAD_REQUEST,
+                HttpStatusCode.BAD_REQUEST,
             )
 
         attempts = 0

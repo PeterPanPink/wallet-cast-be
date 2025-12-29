@@ -103,7 +103,7 @@ All state transitions are validated by `SessionStateMachine.can_transition()` in
 **Location**:
 
 - `app/api/webhooks/rtc.py` → `handle_participant_joined()` (sanitized path example)
-- `app/api/flc/routers/session_ingress.py` → `create_room()` endpoint (explicit room creation)
+- `app/api/routers/session_ingress.py` → `create_room()` endpoint (explicit room creation)
 
 **Flow**:
 
@@ -151,7 +151,7 @@ Client calls start-live endpoint → start_live() creates provider streaming ses
 RTC egress starts pushing to provider → streaming session becomes active
                                        → provider fires video.live_stream.active webhook
                                       → handle_live_stream_active() calls update_session_state(LIVE)
-                                      → Notifies CBX platform via admin/live/start
+                                      → Notifies External Live platform via admin/live/start
 ```
 
 ---
@@ -188,7 +188,7 @@ Client calls end-session endpoint → end_session() determines target_state=ENDI
 end_live() signals provider complete → streaming session goes idle
                                       → provider fires video.live_stream.idle webhook
                                 → handle_live_stream_idle() calls update_session_state(STOPPED)
-                                → Notifies CBX platform via admin/live/stop
+                                → Notifies External Live platform via admin/live/stop
                                 → Optionally recreates a new READY session
 ```
 
@@ -319,4 +319,4 @@ async def update_session_state(self, session: Session, new_state: SessionState) 
 | `app/domain/live/session/_egress.py`               | `start_live()` and `end_live()` logic                        |
 | `app/api/webhooks/rtc.py`                          | RTC webhook handlers (participant_joined, room_finished)     |
 | `app/api/webhooks/streaming.py`                    | Streaming webhook handlers (stream active, idle, disconnected) |
-| `app/api/flc/routers/session_ingress.py`           | Room creation endpoint                                       |
+| `app/api/routers/session_ingress.py`           | Room creation endpoint                                       |

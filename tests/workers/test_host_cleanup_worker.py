@@ -12,7 +12,7 @@ from app.schemas.session_runtime import (
     MuxRuntime,
     SessionRuntime,
 )
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 
 def create_mock_task_context(task_id: str) -> MagicMock:
@@ -85,8 +85,8 @@ class TestCleanupSessionAfterHostLeft:
 
         try:
             with (
-                patch("app.services.cw_livekit.livekit_service", mock_livekit),
-                patch("app.services.cw_mux.mux_service", mock_mux),
+                patch("app.services.integrations.livekit_service.livekit_service", mock_livekit),
+                patch("app.services.integrations.mux_service.mux_service", mock_mux),
                 patch(
                     "app.domain.live.session.session_domain.SessionService",
                     return_value=mock_service,
@@ -315,8 +315,8 @@ class TestCleanupSessionAfterHostLeft:
 
         try:
             with (
-                patch("app.services.cw_livekit.livekit_service", mock_livekit),
-                patch("app.services.cw_mux.mux_service", mock_mux),
+                patch("app.services.integrations.livekit_service.livekit_service", mock_livekit),
+                patch("app.services.integrations.mux_service.mux_service", mock_mux),
                 patch(
                     "app.domain.live.session.session_domain.SessionService",
                     return_value=mock_service,
@@ -374,10 +374,10 @@ class TestCleanupSessionAfterHostLeft:
         # Simulate room already deleted
         mock_service = MagicMock()
         mock_service.delete_room = AsyncMock(
-            side_effect=FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            side_effect=AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg="Room not found",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
         )
         mock_service.update_session_state = AsyncMock()
@@ -388,8 +388,8 @@ class TestCleanupSessionAfterHostLeft:
 
         try:
             with (
-                patch("app.services.cw_livekit.livekit_service", mock_livekit),
-                patch("app.services.cw_mux.mux_service", mock_mux),
+                patch("app.services.integrations.livekit_service.livekit_service", mock_livekit),
+                patch("app.services.integrations.mux_service.mux_service", mock_mux),
                 patch(
                     "app.domain.live.session.session_domain.SessionService",
                     return_value=mock_service,
@@ -455,8 +455,8 @@ class TestCleanupSessionAfterHostLeft:
 
         try:
             with (
-                patch("app.services.cw_livekit.livekit_service", mock_livekit),
-                patch("app.services.cw_mux.mux_service", mock_mux),
+                patch("app.services.integrations.livekit_service.livekit_service", mock_livekit),
+                patch("app.services.integrations.mux_service.mux_service", mock_mux),
                 patch(
                     "app.domain.live.session.session_domain.SessionService",
                     return_value=mock_service,

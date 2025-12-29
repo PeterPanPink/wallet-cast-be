@@ -1,7 +1,7 @@
 """Example: Update participant display name in an RTC session (sanitized demo).
 
 This example demonstrates how to update a participant's display name
-using the /flc/session/ingress/update_participant_name endpoint.
+using the /session/ingress/update_participant_name endpoint.
 
 Prerequisites:
 - A running WalletCast demo backend server (or a stubbed local instance)
@@ -30,7 +30,7 @@ async def update_participant_name_example():
     new_name = "John Doe"
 
     # Prepare request
-    url = f"{api_base_url}/flc/session/ingress/update_participant_name"
+    url = f"{api_base_url}/session/ingress/update_participant_name"
     headers = {
         "Authorization": f"Bearer {auth_token}",
         "Content-Type": "application/json",
@@ -66,7 +66,7 @@ async def update_own_name_in_session():
     print("Step 1: Getting guest access token...")
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{api_base_url}/flc/session/ingress/get_guest_token",
+            f"{api_base_url}/session/ingress/get_guest_token",
             json={
                 "room_id": "my-livestream",
                 "display_name": "Guest",  # Required - initial display name
@@ -92,7 +92,7 @@ async def update_own_name_in_session():
     print("Step 3: Updating display name...")
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            f"{api_base_url}/flc/session/ingress/update_participant_name",
+            f"{api_base_url}/session/ingress/update_participant_name",
             json={
                 "room_id": "my-livestream",
                 "identity": "guest-123",  # Must match your identity

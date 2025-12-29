@@ -57,12 +57,12 @@ interface LiveCaption {
 
 ## 2. Caption Control APIs
 
-### Base URL: `/flc/session/ingress/caption`
+### Base URL: `/session/ingress/caption`
 
 ### Enable Captions
 
 ```http
-POST /flc/session/ingress/caption/enable
+POST /session/ingress/caption/enable
 ```
 
 **Request:**
@@ -89,7 +89,7 @@ POST /flc/session/ingress/caption/enable
 ### Disable Captions
 
 ```http
-POST /flc/session/ingress/caption/disable
+POST /session/ingress/caption/disable
 ```
 
 **Request:**
@@ -115,7 +115,7 @@ POST /flc/session/ingress/caption/disable
 ### Get Caption Status
 
 ```http
-POST /flc/session/ingress/caption/status
+POST /session/ingress/caption/status
 ```
 
 **Request:**
@@ -143,7 +143,7 @@ POST /flc/session/ingress/caption/status
 Change a participant's STT language mid-session:
 
 ```http
-POST /flc/session/ingress/caption/update-language
+POST /session/ingress/caption/update-language
 ```
 
 **Request:**
@@ -173,12 +173,12 @@ POST /flc/session/ingress/caption/update-language
 
 ## 3. Transcript Retrieval APIs
 
-### Base URL: `/flc/session/egress/caption`
+### Base URL: `/session/egress/caption`
 
 ### Get Transcripts (JSON)
 
 ```http
-GET /flc/session/egress/caption/{session_id}/transcripts
+GET /session/egress/caption/{session_id}/transcripts
     ?language={lang}      // Optional: filter by language
     &start_time={float}   // Optional: filter by start time (seconds)
     &end_time={float}     // Optional: filter by end time (seconds)
@@ -218,7 +218,7 @@ GET /flc/session/egress/caption/{session_id}/transcripts
 Full VTT file for the session:
 
 ```http
-GET /flc/session/egress/caption/{session_id}/captions.vtt
+GET /session/egress/caption/{session_id}/captions.vtt
     ?language={lang}      // Optional: get translated text instead
 ```
 
@@ -239,7 +239,7 @@ Welcome to the session
 Segmented m3u8 for live subtitle tracks:
 
 ```http
-GET /flc/session/egress/caption/{session_id}/captions.m3u8
+GET /session/egress/caption/{session_id}/captions.m3u8
     ?language={lang}      // Optional
 ```
 
@@ -248,7 +248,7 @@ GET /flc/session/egress/caption/{session_id}/captions.m3u8
 Individual 4-second VTT segment:
 
 ```http
-GET /flc/session/egress/caption/{session_id}/captions-{segment_num}.vtt
+GET /session/egress/caption/{session_id}/captions-{segment_num}.vtt
     ?language={lang}      // Optional
 ```
 
@@ -257,7 +257,7 @@ GET /flc/session/egress/caption/{session_id}/captions-{segment_num}.vtt
 HLS master playlist combining streaming provider video with subtitle tracks:
 
 ```http
-GET /flc/session/egress/caption/{session_id}/master.m3u8
+GET /session/egress/caption/{session_id}/master.m3u8
 ```
 
 ---

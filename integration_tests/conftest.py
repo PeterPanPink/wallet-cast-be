@@ -8,10 +8,10 @@ import sys
 import warnings
 from pathlib import Path
 
-# Ignore warnings from app.cw
-warnings.filterwarnings("ignore", category=DeprecationWarning, module="app.cw.*")
+# Ignore warnings from app.shared
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="app.shared.*")
 
-# Ensure `app` directory is on sys.path so `cw` and `app` packages resolve
+# Ensure `app` directory is on sys.path so `app` packages resolve
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 APP_DIR = PROJECT_ROOT / "app"
 app_dir_str = str(APP_DIR)

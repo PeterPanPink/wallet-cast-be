@@ -20,7 +20,7 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN", "")
 
 async def get_transcripts_json(session_id: str):
     """Get transcripts in JSON format."""
-    url = f"{API_BASE_URL}/flc/session/egress/caption/{session_id}/transcripts"
+    url = f"{API_BASE_URL}/session/egress/caption/{session_id}/transcripts"
 
     headers = {
         "Authorization": f"Bearer {AUTH_TOKEN}",
@@ -50,7 +50,7 @@ async def get_transcripts_json(session_id: str):
 
 async def get_captions_webvtt(session_id: str, language: str | None = None):
     """Get captions in WebVTT format."""
-    url = f"{API_BASE_URL}/flc/session/egress/caption/{session_id}/captions.vtt"
+    url = f"{API_BASE_URL}/session/egress/caption/{session_id}/captions.vtt"
 
     params = {}
     if language:
@@ -82,7 +82,7 @@ async def get_captions_webvtt(session_id: str, language: str | None = None):
 
 async def get_captions_m3u8(session_id: str, languages: list[str] | None = None):
     """Get HLS playlist with subtitle tracks."""
-    url = f"{API_BASE_URL}/flc/session/egress/caption/{session_id}/captions.m3u8"
+    url = f"{API_BASE_URL}/session/egress/caption/{session_id}/captions.m3u8"
 
     params: dict[str, str | list[str]] = {
         "base_url": API_BASE_URL,

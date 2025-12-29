@@ -4,7 +4,7 @@ import asyncio
 
 from loguru import logger
 
-from app.cw.token_bucket import TokenBucket
+from app.shared.token_bucket import TokenBucket
 
 
 async def acquire_with_backoff(

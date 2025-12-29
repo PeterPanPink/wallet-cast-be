@@ -50,7 +50,7 @@ Configuration is in `pyproject.toml` under `[tool.ruff]`:
 - **Line length**: 100 characters
 - **Target**: Python 3.10+
 - **Quote style**: Double quotes
-- **Exclude**: `app/cw/` (read-only shared library)
+- **Exclude**: `app/shared/` (read-only shared library)
 
 ## Common Issues & Fixes
 

@@ -1,7 +1,7 @@
 # Test Dockerfile with all dependencies (including dev) for running tests
 FROM python:3.13-slim
 
-WORKDIR /cw_app
+WORKDIR /app
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project
 
 # Set up virtual environment. Works like `source .venv/bin/activate`
-ENV PATH="/cw_app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Copy application and test code
 COPY app ./app

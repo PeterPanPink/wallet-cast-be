@@ -5,7 +5,7 @@ This example shows how to query and retrieve transcripts for a session.
 
 import asyncio
 
-from app.cw.storage.mongo import get_mongo_client
+from app.shared.storage.mongo import get_mongo_client
 from app.schemas import Transcript
 from app.schemas.init import init_beanie_odm
 

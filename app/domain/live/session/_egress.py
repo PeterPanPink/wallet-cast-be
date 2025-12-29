@@ -7,7 +7,7 @@ from loguru import logger
 
 from app.app_config import get_app_environ_config
 from app.schemas import MuxPlaybackId, Session, SessionRuntime, SessionState
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from ._base import BaseService
 from ._egress_cleanup import schedule_delayed_cleanup
@@ -40,7 +40,7 @@ class EgressOperations(BaseService):
             New Session in READY state
 
         Raises:
-            FlcError: If channel is not found or inactive
+            AppError: If channel is not found or inactive
         """
         from .session_state_machine import SessionStateMachine
 
@@ -73,10 +73,10 @@ class EgressOperations(BaseService):
                 logger.info(f"Session {session.session_id} transitioned to CANCELLED")
 
         if not updated_session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found after state update: {session.room_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Create new session from terminal state
@@ -85,10 +85,10 @@ class EgressOperations(BaseService):
         # Fetch the new session document
         new_session = await self._get_active_session_by_room_id(updated_session.room_id)
         if not new_session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"New session not found after recreation: {updated_session.room_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         logger.info(
@@ -130,7 +130,7 @@ class EgressOperations(BaseService):
             LiveStreamStartResponse with egress and Mux stream information
 
         Raises:
-            FlcError: If room doesn't exist or stream already in progress
+            AppError: If room doesn't exist or stream already in progress
             ValueError: If state transition is invalid
             Exception: If Mux or LiveKit API calls fail
 
@@ -148,10 +148,10 @@ class EgressOperations(BaseService):
         # Get session and verify it exists
         session = await self._get_active_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Check if stream is already in progress (PUBLISHING or LIVE)
@@ -179,10 +179,10 @@ class EgressOperations(BaseService):
                 )
 
             # If we don't have complete egress data, treat as error
-            raise FlcError(
-                errcode=FlcErrorCode.E_LIVE_STREAM_IN_PROGRESS,
+            raise AppError(
+                errcode=AppErrorCode.E_LIVE_STREAM_IN_PROGRESS,
                 errmesg=f"Live stream in progress but missing egress data for room: {room_name}",
-                status_code=FlcStatusCode.CONFLICT,
+                status_code=HttpStatusCode.CONFLICT,
             )
 
         # Handle non-READY states: abort and recreate session
@@ -230,10 +230,10 @@ class EgressOperations(BaseService):
                 # Get the LiveKit WebSocket URL for the client
                 livekit_ws_url = cfg.LIVEKIT_URL
                 if not livekit_ws_url:
-                    raise FlcError(
-                        errcode=FlcErrorCode.E_INVALID_REQUEST,
+                    raise AppError(
+                        errcode=AppErrorCode.E_INVALID_REQUEST,
                         errmesg="LIVEKIT_URL must be configured",
-                        status_code=FlcStatusCode.BAD_REQUEST,
+                        status_code=HttpStatusCode.BAD_REQUEST,
                     )
 
                 # Construct recording page URL
@@ -247,10 +247,10 @@ class EgressOperations(BaseService):
                 frontend_base_url = cfg.FRONTEND_BASE_URL
                 if not frontend_base_url:
                     if not referer:
-                        raise FlcError(
-                            errcode=FlcErrorCode.E_INVALID_REQUEST,
+                        raise AppError(
+                            errcode=AppErrorCode.E_INVALID_REQUEST,
                             errmesg="FRONTEND_BASE_URL must be configured or Referer header must be provided",
-                            status_code=FlcStatusCode.BAD_REQUEST,
+                            status_code=HttpStatusCode.BAD_REQUEST,
                         )
                     # Extract origin from referer (scheme + host)
                     parsed = urlparse(referer)
@@ -447,7 +447,7 @@ class EgressOperations(BaseService):
             mux_stream_id: Mux stream ID to complete
 
         Raises:
-            FlcError: If room doesn't exist
+            AppError: If room doesn't exist
             ValueError: If state transition is invalid
             Exception: If LiveKit or Mux API calls fail
 
@@ -465,10 +465,10 @@ class EgressOperations(BaseService):
         # Get session and verify it exists
         session = await self._get_active_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Verify session is in LIVE state (stream must be active)
@@ -531,7 +531,7 @@ class EgressOperations(BaseService):
 
                 # Schedule delayed cleanup to check Mux status and finalize session
                 # This will wait 1 minute, then check if Mux stream is still active.
-                # If not active, it will transition to STOPPED and notify CBX Live.
+                # If not active, it will transition to STOPPED and notify External Live.
                 schedule_delayed_cleanup(
                     session_id=session.session_id,
                     mux_stream_id=mux_stream_id,
@@ -560,10 +560,10 @@ class EgressOperations(BaseService):
 
         # If there were any errors, raise them
         if errors:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INTERNAL_ERROR,
+            raise AppError(
+                errcode=AppErrorCode.E_INTERNAL_ERROR,
                 errmesg=f"Live stream ended with errors: {'; '.join(errors)}",
-                status_code=FlcStatusCode.INTERNAL_SERVER_ERROR,
+                status_code=HttpStatusCode.INTERNAL_SERVER_ERROR,
             )
 
         logger.info(f"Live stream ended successfully for room={room_name}")

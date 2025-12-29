@@ -7,7 +7,7 @@ import pytest
 from app.domain.live.session._base import BaseService
 from app.schemas import Session, SessionState
 from app.schemas.session_runtime import SessionRuntime
-from app.utils.flc_errors import FlcError
+from app.utils.app_errors import AppError
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -66,7 +66,7 @@ class TestUpdateSessionState:
         # Note: updated_at may still be the same if it was a true no-op
 
     async def test_update_state_invalid_transition(self, beanie_db):
-        """Test invalid state transition raises FlcError."""
+        """Test invalid state transition raises AppError."""
         # Arrange
         service = BaseService()
         session = Session(
@@ -82,7 +82,7 @@ class TestUpdateSessionState:
         await session.insert()
 
         # Act & Assert - IDLE cannot transition directly to LIVE
-        with pytest.raises(FlcError, match="Invalid state transition"):
+        with pytest.raises(AppError, match="Invalid state transition"):
             await service.update_session_state(session, SessionState.LIVE)
 
     async def test_update_state_to_live_sets_started_at(self, beanie_db):

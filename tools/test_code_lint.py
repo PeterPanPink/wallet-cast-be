@@ -9,18 +9,18 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
 
 from code_lint import (
-    CwOutReturnTypeRule,
-    NoTryExceptInFlcRule,
-    OnlyFlcErrorRule,
+    ApiOutReturnTypeRule,
+    NoTryExceptInV1ApiRule,
+    OnlyAppErrorRule,
     parse_noqa_comments,
 )
 
 
-class TestNoTryExceptInFlcRule:
-    """Test FLC002: No try-except blocks in flc directory."""
+class TestNoTryExceptInV1ApiRule:
+    """Test API002: No try-except blocks in v1 api directory."""
 
-    def test_detects_try_except_in_flc_directory(self):
-        """Should detect try-except blocks in flc directory."""
+    def test_detects_try_except_in_v1_api_directory(self):
+        """Should detect try-except blocks in v1 api directory."""
         code = """
 try:
     result = some_function()
@@ -28,18 +28,18 @@ except Exception as e:
     print(e)
 """
         tree = ast.parse(code)
-        rule = NoTryExceptInFlcRule()
+        rule = NoTryExceptInV1ApiRule()
 
-        # Create a path that includes app/api/flc/
-        file_path = Path("/home/user/project/app/api/flc/routers/session.py")
+        # Create a path that includes app/api/v1/
+        file_path = Path("/home/user/project/app/api/v1/routers/session.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 1
-        assert violations[0].rule_id == "FLC002"
+        assert violations[0].rule_id == "API002"
         assert "try-except" in violations[0].message
 
-    def test_ignores_try_except_outside_flc_directory(self):
-        """Should not detect try-except blocks outside flc directory."""
+    def test_ignores_try_except_outside_v1_api_directory(self):
+        """Should not detect try-except blocks outside v1 api directory."""
         code = """
 try:
     result = some_function()
@@ -47,9 +47,9 @@ except Exception as e:
     print(e)
 """
         tree = ast.parse(code)
-        rule = NoTryExceptInFlcRule()
+        rule = NoTryExceptInV1ApiRule()
 
-        # Create a path outside flc directory
+        # Create a path outside v1 api directory
         file_path = Path("/home/user/project/app/services/some_service.py")
         violations = rule.check_file(file_path, tree)
 
@@ -69,16 +69,16 @@ def handler():
         pass
 """
         tree = ast.parse(code)
-        rule = NoTryExceptInFlcRule()
+        rule = NoTryExceptInV1ApiRule()
 
-        file_path = Path("/home/user/project/app/api/flc/handlers.py")
+        file_path = Path("/home/user/project/app/api/v1/handlers.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 2
 
 
-class TestCwOutReturnTypeRule:
-    """Test FLC003: All endpoints must return CwOut[T] or response classes."""
+class TestApiOutReturnTypeRule:
+    """Test API003: All endpoints must return ApiOut[T] or response classes."""
 
     def test_detects_missing_return_type_on_endpoint(self):
         """Should detect endpoints without return type annotation."""
@@ -92,31 +92,31 @@ async def test_endpoint():
     return {"message": "test"}
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/routers/test.py")
+        file_path = Path("/home/user/project/app/api/routers/test.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 1
-        assert violations[0].rule_id == "FLC003"
+        assert violations[0].rule_id == "API003"
         assert "must have a return type annotation" in violations[0].message
 
     def test_accepts_cwout_return_type(self):
-        """Should accept CwOut[T] return type."""
+        """Should accept ApiOut[T] return type."""
         code = """
 from fastapi import APIRouter
-from app.api.flc.schemas.base import CwOut
+from app.api.v1.schemas.base import ApiOut
 
 router = APIRouter()
 
 @router.get("/test")
-async def test_endpoint() -> CwOut[dict]:
-    return CwOut(results={})
+async def test_endpoint() -> ApiOut[dict]:
+    return ApiOut(results={})
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/routers/test.py")
+        file_path = Path("/home/user/project/app/api/routers/test.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 0
@@ -134,9 +134,9 @@ async def test_endpoint() -> PlainTextResponse:
     return PlainTextResponse(content="test")
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/routers/test.py")
+        file_path = Path("/home/user/project/app/api/routers/test.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 0
@@ -153,14 +153,14 @@ async def test_endpoint() -> dict:
     return {"message": "test"}
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/routers/test.py")
+        file_path = Path("/home/user/project/app/api/routers/test.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 1
-        assert violations[0].rule_id == "FLC003"
-        assert "must return CwOut[T]" in violations[0].message
+        assert violations[0].rule_id == "API003"
+        assert "must return ApiOut[T]" in violations[0].message
 
     def test_ignores_non_endpoint_functions(self):
         """Should ignore functions without router decorator."""
@@ -169,9 +169,9 @@ def helper_function() -> dict:
     return {"message": "test"}
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/routers/test.py")
+        file_path = Path("/home/user/project/app/api/routers/test.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 0
@@ -188,9 +188,9 @@ async def test_endpoint():
     return {"message": "test"}
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/schemas/base.py")
+        file_path = Path("/home/user/project/app/api/schemas/base.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 0
@@ -219,17 +219,17 @@ async def patch_endpoint():
     return {}
 """
         tree = ast.parse(code)
-        rule = CwOutReturnTypeRule()
+        rule = ApiOutReturnTypeRule()
 
-        file_path = Path("/home/user/project/app/api/flc/routers/test.py")
+        file_path = Path("/home/user/project/app/api/routers/test.py")
         violations = rule.check_file(file_path, tree)
 
         # Should detect all 4 endpoints without return types
         assert len(violations) == 4
 
 
-class TestOnlyFlcErrorRule:
-    """Test FLC001: Only FlcError should be raised."""
+class TestOnlyAppErrorRule:
+    """Test API001: Only AppError should be raised."""
 
     def test_detects_value_error(self):
         """Should detect ValueError being raised."""
@@ -238,23 +238,23 @@ def function():
     raise ValueError("error message")
 """
         tree = ast.parse(code)
-        rule = OnlyFlcErrorRule()
+        rule = OnlyAppErrorRule()
 
         file_path = Path("/home/user/project/app/services/test.py")
         violations = rule.check_file(file_path, tree)
 
         assert len(violations) == 1
-        assert violations[0].rule_id == "FLC001"
+        assert violations[0].rule_id == "API001"
         assert "ValueError" in violations[0].message
 
     def test_accepts_flc_error(self):
-        """Should accept FlcError being raised."""
+        """Should accept AppError being raised."""
         code = """
 def function():
-    raise FlcError(errcode="ERR001", errmesg="error")
+    raise AppError(errcode="ERR001", errmesg="error")
 """
         tree = ast.parse(code)
-        rule = OnlyFlcErrorRule()
+        rule = OnlyAppErrorRule()
 
         file_path = Path("/home/user/project/app/services/test.py")
         violations = rule.check_file(file_path, tree)
@@ -271,7 +271,7 @@ def function():
         raise
 """
         tree = ast.parse(code)
-        rule = OnlyFlcErrorRule()
+        rule = OnlyAppErrorRule()
 
         file_path = Path("/home/user/project/app/services/test.py")
         violations = rule.check_file(file_path, tree)
@@ -284,15 +284,15 @@ class TestNoqaComments:
 
     def test_parse_noqa_with_specific_code(self):
         """Should parse noqa comments with specific rule codes."""
-        code = """x = 1  # noqa: FLC001"""
+        code = """x = 1  # noqa: API001"""
         result = parse_noqa_comments(code)
-        assert result == {1: {"FLC001"}}
+        assert result == {1: {"API001"}}
 
     def test_parse_noqa_with_multiple_codes(self):
         """Should parse noqa comments with multiple rule codes."""
-        code = """x = 1  # noqa: FLC001, FLC002"""
+        code = """x = 1  # noqa: API001, API002"""
         result = parse_noqa_comments(code)
-        assert result == {1: {"FLC001", "FLC002"}}
+        assert result == {1: {"API001", "API002"}}
 
     def test_parse_noqa_without_codes(self):
         """Should parse bare noqa comments (disable all rules)."""
@@ -310,16 +310,16 @@ class TestNoqaComments:
         """Should parse noqa comments case-insensitively."""
         code = """x = 1  # NOQA: flc001"""
         result = parse_noqa_comments(code)
-        assert result == {1: {"FLC001"}}
+        assert result == {1: {"API001"}}
 
     def test_parse_multiple_lines(self):
         """Should parse noqa comments on multiple lines."""
         code = """line1
-x = 1  # noqa: FLC001
+x = 1  # noqa: API001
 y = 2
-z = 3  # noqa: FLC002, FLC003"""
+z = 3  # noqa: API002, API003"""
         result = parse_noqa_comments(code)
-        assert result == {2: {"FLC001"}, 4: {"FLC002", "FLC003"}}
+        assert result == {2: {"API001"}, 4: {"API002", "API003"}}
 
     def test_no_noqa_comments(self):
         """Should return empty dict when no noqa comments present."""

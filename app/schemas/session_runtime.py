@@ -72,8 +72,8 @@ class SessionRuntime(BaseModel):
         description="Storyboard VTT URL for progress bar preview",
     )
 
-    # CBX Live integration
+    # External Live integration
     post_id: str | None = Field(
         default=None,
-        description="Post ID returned from CBX Live admin/live/start API",
+        description="Post ID returned from External Live admin/live/start API",
     )

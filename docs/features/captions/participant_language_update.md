@@ -5,7 +5,7 @@ Allow participants to change their STT language mid-session without disrupting o
 ## API Endpoint
 
 ```http
-POST /flc/session/ingress/caption/update-language
+POST /session/ingress/caption/update-language
 ```
 
 **Request:**

@@ -9,7 +9,7 @@ from datetime import datetime
 
 from loguru import logger
 
-from app.cw.storage.redis import get_redis_client
+from app.shared.storage.redis import get_redis_client
 from app.domain.live.session._caption_query import (
     MAX_SEGMENTS,
     SEGMENT_DURATION,
@@ -18,7 +18,7 @@ from app.domain.live.session._caption_query import (
     get_transcripts_for_session,
 )
 from app.schemas import Session, Transcript
-from app.services.cw_s3 import s3_service
+from app.services.integrations.s3_storage import s3_service
 
 
 class CaptionS3Uploader:

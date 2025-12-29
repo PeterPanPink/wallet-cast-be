@@ -60,7 +60,7 @@ build-backend = "hatchling.build"
 packages = ["app"]
 
 [tool.coverage.run]
-omit = ["app/cw/*"]
+omit = ["app/shared/*"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
@@ -102,7 +102,7 @@ exclude = [
     "dist",
     "node_modules",
     "venv",
-    "app/cw",         # Read-only shared library
+    "app/shared",     # Read-only shared library
 ]
 
 # Line length

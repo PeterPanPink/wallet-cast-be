@@ -5,7 +5,7 @@ from typing import Any
 from loguru import logger
 
 from app.app_config import get_app_environ_config
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from ._base import BaseService
 
@@ -80,7 +80,7 @@ class IngressOperations(BaseService):
             room_name: Room name (room_id) to delete
 
         Raises:
-            FlcError: If the session is not found for the room
+            AppError: If the session is not found for the room
             Exception: If the LiveKit API request fails
 
         Example:
@@ -91,10 +91,10 @@ class IngressOperations(BaseService):
         # Verify session exists for the room
         session = await self._get_last_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found for room: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         await self.livekit.delete_room(room_name=room_name)
@@ -143,10 +143,10 @@ class IngressOperations(BaseService):
         # Check if room exists in database
         session = await self._get_last_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Get max_participants from session or fall back to env config
@@ -224,10 +224,10 @@ class IngressOperations(BaseService):
         # Check if room exists in database
         session = await self._get_last_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         token = await self.livekit.create_access_token(
@@ -290,10 +290,10 @@ class IngressOperations(BaseService):
         # Check if room exists in database
         session = await self._get_last_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         token = self.livekit.create_recorder_token(
@@ -327,7 +327,7 @@ class IngressOperations(BaseService):
             Room object with updated metadata (has .name, .sid, .metadata attributes)
 
         Raises:
-            FlcError: If room/session not found
+            AppError: If room/session not found
             ValueError: If LIVEKIT_URL is not configured
             Exception: If the API request fails
 
@@ -346,10 +346,10 @@ class IngressOperations(BaseService):
         # Verify session exists
         session = await self._get_last_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Update room metadata via LiveKit API
@@ -389,7 +389,7 @@ class IngressOperations(BaseService):
 
         Raises:
             ValueError: If neither name nor metadata is provided
-            FlcError: If room/session not found
+            AppError: If room/session not found
             Exception: If the API request fails
 
         Example:
@@ -408,10 +408,10 @@ class IngressOperations(BaseService):
         # Verify session exists
         session = await self._get_last_session_by_room_id(room_name)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Room not found: {room_name}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Update participant via LiveKit API

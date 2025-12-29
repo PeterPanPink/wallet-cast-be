@@ -4,13 +4,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.api.flc.dependency import (
+from app.api.v1.dependency import (
     USER_WHITELIST_KEY,
     User,
     check_user_in_whitelist,
     get_current_user,
 )
-from app.utils.flc_errors import FlcError
+from app.utils.app_errors import AppError
 
 
 class TestCheckUserInWhitelist:
@@ -72,9 +72,9 @@ class TestGetCurrentUser:
         request = MagicMock()
         redis_client = AsyncMock()
 
-        with pytest.raises(FlcError) as exc_info, pytest.MonkeyPatch.context() as mp:
+        with pytest.raises(AppError) as exc_info, pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "app.api.flc.dependency.verify_token",
+                "app.api.v1.dependency.verify_token",
                 AsyncMock(return_value=None),
             )
             await get_current_user(request, redis_client)
@@ -88,9 +88,9 @@ class TestGetCurrentUser:
         request = MagicMock()
         redis_client = AsyncMock()
 
-        with pytest.raises(FlcError) as exc_info, pytest.MonkeyPatch.context() as mp:
+        with pytest.raises(AppError) as exc_info, pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "app.api.flc.dependency.verify_token",
+                "app.api.v1.dependency.verify_token",
                 AsyncMock(return_value={"some_field": "value"}),
             )
             await get_current_user(request, redis_client)
@@ -105,9 +105,9 @@ class TestGetCurrentUser:
         redis_client = AsyncMock()
         redis_client.sismember = AsyncMock(return_value=0)
 
-        with pytest.raises(FlcError) as exc_info, pytest.MonkeyPatch.context() as mp:
+        with pytest.raises(AppError) as exc_info, pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "app.api.flc.dependency.verify_token",
+                "app.api.v1.dependency.verify_token",
                 AsyncMock(return_value={"user_id": "user123"}),
             )
             await get_current_user(request, redis_client)
@@ -124,7 +124,7 @@ class TestGetCurrentUser:
 
         with pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "app.api.flc.dependency.verify_token",
+                "app.api.v1.dependency.verify_token",
                 AsyncMock(return_value={"user_id": "user123"}),
             )
             result = await get_current_user(request, redis_client)
@@ -143,7 +143,7 @@ class TestGetCurrentUser:
 
         with pytest.MonkeyPatch.context() as mp:
             mp.setattr(
-                "app.api.flc.dependency.verify_token",
+                "app.api.v1.dependency.verify_token",
                 AsyncMock(return_value={"user_id": "user456"}),
             )
             result = await get_current_user(request, redis_client)

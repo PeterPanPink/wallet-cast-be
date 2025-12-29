@@ -1,10 +1,10 @@
-"""Unit tests for CBX Live API schemas."""
+"""Unit tests for External Live API schemas."""
 
 import json
 
 import pytest
 
-from app.services.cbx_live.cbx_live_schemas import AdminStartLiveBody
+from app.services.integrations.external_live.external_live_schemas import AdminStartLiveBody
 
 
 class TestAdminStartLiveBody:
@@ -12,7 +12,7 @@ class TestAdminStartLiveBody:
 
     @pytest.fixture
     def example_json(self) -> str:
-        """Example JSON from CBX Live API."""
+        """Example JSON from External Live API."""
         return """{
   "user_id": "zaqqaz",
   "channel": {
@@ -111,7 +111,7 @@ class TestAdminStartLiveBody:
 
     def test_serialize_with_aliases(self) -> None:
         """Test that serializing with aliases produces correct field names."""
-        from app.services.cbx_live.cbx_live_schemas import ChannelConfig, SessionConfig
+        from app.services.integrations.external_live.external_live_schemas import ChannelConfig, SessionConfig
 
         model = AdminStartLiveBody(
             user_id="test_user",
@@ -170,7 +170,7 @@ class TestAdminStartLiveBody:
 
     def test_schema_fields_match_example(self, example_json: str) -> None:
         """Test that schema fields exactly match example JSON fields (no more, no less)."""
-        from app.services.cbx_live.cbx_live_schemas import ChannelConfig, SessionConfig
+        from app.services.integrations.external_live.external_live_schemas import ChannelConfig, SessionConfig
 
         original_dict = json.loads(example_json)
 

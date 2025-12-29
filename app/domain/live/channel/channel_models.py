@@ -6,7 +6,7 @@ from pydantic import BaseModel, field_validator
 
 from app.domain.utils.locale_validators import validate_country_code, validate_language_code
 from app.schemas.user_configs import UserConfigs
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 
 class ChannelResponse(BaseModel):
@@ -62,10 +62,10 @@ class ChannelCreateParams(BaseModel):
             return v
         v = [item.strip() for item in v if item.strip()]
         if len(v) > 3:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg="category_ids cannot have more than 3 elements",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
         return v
 

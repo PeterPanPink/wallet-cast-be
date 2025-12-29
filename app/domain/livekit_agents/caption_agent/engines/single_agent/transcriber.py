@@ -23,7 +23,7 @@ from app.domain.livekit_agents.caption_agent.stt.config import (
     resolve_stt_model,
 )
 from app.domain.livekit_agents.caption_agent.transcripts.pipeline import TranscriptPipeline
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 
 class RoomCaptionTranscriber:
@@ -194,10 +194,10 @@ class RoomCaptionTranscriber:
         elif isinstance(stt_model, str):
             stt_instance = inference.STT.from_model_string(stt_model)
         else:
-            raise FlcError(
-                FlcErrorCode.E_UNSUPPORTED_STT_CONFIG,
+            raise AppError(
+                AppErrorCode.E_UNSUPPORTED_STT_CONFIG,
                 f"Unsupported STT config: {type(stt_config)}",
-                FlcStatusCode.BAD_REQUEST,
+                HttpStatusCode.BAD_REQUEST,
             )
 
         if use_vad or not stt_instance.capabilities.streaming:

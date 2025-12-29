@@ -6,7 +6,7 @@ transcripts into multiple languages and saves them to the database.
 
 import asyncio
 
-from app.cw.storage.mongo import get_mongo_client
+from app.shared.storage.mongo import get_mongo_client
 from app.schemas.init import init_beanie_odm
 from app.schemas.transcript import Transcript
 from app.workers.caption_agent_worker import start_caption_agent

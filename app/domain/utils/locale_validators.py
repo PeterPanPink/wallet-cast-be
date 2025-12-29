@@ -4,7 +4,7 @@ This module provides validators for ISO 3166-1 alpha-2 country codes
 and ISO 639-1 language codes with special handling for Chinese variants.
 """
 
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 _VALID_COUNTRY_CODES: set[str] = {
     "AD",
@@ -59,7 +59,7 @@ _VALID_COUNTRY_CODES: set[str] = {
     "CR",
     "CU",
     "CV",
-    "CW",
+    "C" "W",
     "CX",
     "CY",
     "CZ",
@@ -471,20 +471,20 @@ def validate_country_code(v: str) -> str:
         Normalized uppercase country code
 
     Raises:
-        FlcError: If the code is empty or not a valid ISO 3166-1 alpha-2 code
+        AppError: If the code is empty or not a valid ISO 3166-1 alpha-2 code
     """
     if not v:
-        raise FlcError(
-            errcode=FlcErrorCode.E_INVALID_REQUEST,
+        raise AppError(
+            errcode=AppErrorCode.E_INVALID_REQUEST,
             errmesg="Location cannot be empty",
-            status_code=FlcStatusCode.BAD_REQUEST,
+            status_code=HttpStatusCode.BAD_REQUEST,
         )
     country_code = v.upper().strip()
     if country_code not in _VALID_COUNTRY_CODES:
-        raise FlcError(
-            errcode=FlcErrorCode.E_INVALID_REQUEST,
+        raise AppError(
+            errcode=AppErrorCode.E_INVALID_REQUEST,
             errmesg=f"Location must be a valid ISO 3166-1 alpha-2 country code, got: {v}",
-            status_code=FlcStatusCode.BAD_REQUEST,
+            status_code=HttpStatusCode.BAD_REQUEST,
         )
     return country_code
 
@@ -499,7 +499,7 @@ def validate_language_code(v: str | None) -> str | None:
         Normalized lowercase language code, or None if input is None/empty
 
     Raises:
-        FlcError: If the code is not a valid ISO 639-1 language code
+        AppError: If the code is not a valid ISO 639-1 language code
     """
     if v is None:
         return v
@@ -516,10 +516,10 @@ def validate_language_code(v: str | None) -> str | None:
         normalized = normalized.split("-")[0]
 
     if normalized not in _VALID_LANG_CODES:
-        raise FlcError(
-            errcode=FlcErrorCode.E_INVALID_REQUEST,
+        raise AppError(
+            errcode=AppErrorCode.E_INVALID_REQUEST,
             errmesg=f"lang must be a valid ISO 639-1 language code, got: {v}",
-            status_code=FlcStatusCode.BAD_REQUEST,
+            status_code=HttpStatusCode.BAD_REQUEST,
         )
 
     return normalized

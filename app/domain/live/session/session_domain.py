@@ -32,7 +32,7 @@ class SessionService:
     ) -> SessionResponse:
         """Create a new session.
 
-        Raises FlcError if an active session already exists
+        Raises AppError if an active session already exists
         """
         return await self._sessions.create_session(params=params)
 
@@ -42,7 +42,7 @@ class SessionService:
     ) -> SessionResponse:
         """Get a single session by session_id.
 
-        Raises FlcError if session not found.
+        Raises AppError if session not found.
         """
         return await self._sessions.get_session(session_id=session_id)
 
@@ -52,7 +52,7 @@ class SessionService:
     ) -> SessionResponse:
         """Get an active session by room_id.
 
-        Raises FlcError if session not found or not in an active state.
+        Raises AppError if session not found or not in an active state.
         """
         return await self._sessions.get_active_session_by_room_id(room_id=room_id)
 
@@ -62,7 +62,7 @@ class SessionService:
     ) -> SessionResponse:
         """Get the most recent session by room_id (regardless of status).
 
-        Raises FlcError if no session found for room_id.
+        Raises AppError if no session found for room_id.
         """
         return await self._sessions.get_last_session_by_room_id(room_id=room_id)
 
@@ -72,7 +72,7 @@ class SessionService:
     ) -> SessionResponse:
         """Get the active session for a channel.
 
-        Raises FlcError if no active session found for channel.
+        Raises AppError if no active session found for channel.
         """
         return await self._sessions.get_active_session_by_channel(channel_id=channel_id)
 
@@ -93,7 +93,7 @@ class SessionService:
 
         Raises:
             ValueError: If session is not in STOPPED state
-            FlcError: If channel is not found or inactive
+            AppError: If channel is not found or inactive
         """
         return await self._sessions.recreate_session_from_stopped(
             stopped_session=stopped_session,
@@ -116,7 +116,7 @@ class SessionService:
 
         Raises:
             ValueError: If session is not in a terminal state (STOPPED or CANCELLED)
-            FlcError: If channel is not found or inactive
+            AppError: If channel is not found or inactive
         """
         return await self._sessions.recreate_session_from_terminal(
             terminal_session=terminal_session,
@@ -146,7 +146,7 @@ class SessionService:
     ) -> SessionResponse:
         """Update session metadata.
 
-        Raises FlcError if session not found.
+        Raises AppError if session not found.
         """
         return await self._sessions.update_session(
             session_id=session_id,
@@ -195,7 +195,7 @@ class SessionService:
             room_name: Room name (room_id) to delete
 
         Raises:
-            FlcError: If session not found for room
+            AppError: If session not found for room
             Exception: If the LiveKit API request fails
         """
         return await self._ingress.delete_room(room_name=room_name)
@@ -426,12 +426,12 @@ class SessionService:
         """
         session = await self._sessions._get_session_by_id(session_id)
         if not session:
-            from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+            from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found: {session_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return await self._sessions.update_session_state(session, new_state)

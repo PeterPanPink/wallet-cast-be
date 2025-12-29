@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 from app.api.admin.config import DefaultServiceConfig
-from app.cw.config import config, get_dynamic_config
+from app.shared.config import config, get_dynamic_config
 
 _dynamic_config = None
 
@@ -50,9 +50,9 @@ class AppEnvironConfig(BaseModel):
     AWS_REGION: str = config.get("AWS_REGION", "us-east-1").strip()  # type: ignore
     S3_CAPTION_BUCKET: str | None = (config.get("S3_CAPTION_BUCKET") or "").strip() or None
     S3_CAPTION_PREFIX: str = config.get("S3_CAPTION_PREFIX", "captions").strip()  # type: ignore
-    # CBX Live configuration
-    CBX_LIVE_BASE_URL: str | None = (config.get("CBX_LIVE_BASE_URL") or "").strip() or None
-    CBX_LIVE_API_KEY: str | None = (config.get("CBX_LIVE_API_KEY") or "").strip() or None
+    # External Live integration (optional)
+    EXTERNAL_LIVE_BASE_URL: str | None = (config.get("EXTERNAL_LIVE_BASE_URL") or "").strip() or None
+    EXTERNAL_LIVE_API_KEY: str | None = (config.get("EXTERNAL_LIVE_API_KEY") or "").strip() or None
     # Room configuration
     MAX_PARTICIPANTS_LIMIT: int = int((config.get("MAX_PARTICIPANTS_LIMIT") or "").strip() or 20)
 

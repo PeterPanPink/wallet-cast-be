@@ -1,14 +1,14 @@
 """Demo endpoint for JWT token generation.
 
 This endpoint allows easy testing of API authentication by calling
-the mock corebe service to generate tokens.
+the mock core_api service to generate tokens.
 """
 
 import httpx
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
-from app.cw.config import config
+from app.shared.config import config
 
 router = APIRouter(prefix="/live/demo/auth", tags=["Dev Only"])
 
@@ -21,19 +21,19 @@ async def get_mock_auth_token(
     """Generate a mock JWT token for API testing.
 
     This is a demo endpoint for testing API authentication. DO NOT use in production.
-    Calls mock corebe to generate a valid token.
+    Calls mock core_api to generate a valid token.
 
     Example:
         GET /demo/auth/token?user_id=test_user&pwd=mock_password
 
     Returns:
-        The response from mock corebe login endpoint.
+        The response from mock core_api login endpoint.
     """
-    base_url = config.get("COREBE_API_URL", "")
+    base_url = config.get("CORE_API_URL", "")
     if not base_url:
         return JSONResponse(
             status_code=500,
-            content={"errcode": "E_CONFIG", "errmesg": "COREBE_API_URL not configured"},
+            content={"errcode": "E_CONFIG", "errmesg": "CORE_API_URL not configured"},
         )
 
     url = f"{base_url.rstrip('/')}/u/user/v2/login"
@@ -57,7 +57,7 @@ async def get_mock_auth_token(
             status_code=502,
             content={
                 "errcode": "E_AUTH_LOGIN_FAILED",
-                "errmesg": "Invalid response from mock corebe",
+                "errmesg": "Invalid response from mock core_api",
             },
         )
 

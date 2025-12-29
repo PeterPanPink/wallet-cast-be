@@ -1,7 +1,7 @@
 // MongoDB initialization script for local development.
-// Creates the flame databases with a marker document so they persist.
+// Creates demo databases with a marker document so they persist.
 (() => {
-  const databases = ['flc'];
+  const databases = ['walletcast_demo'];
 
   databases.forEach((name) => {
     const database = db.getSiblingDB(name);

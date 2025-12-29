@@ -54,6 +54,8 @@ RULES: list[tuple[str, re.Pattern[str]]] = [
     ("private_key", re.compile(r"-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----")),
     # Connection strings with credentials (user:pass@host)
     ("conn_with_creds", re.compile(r"\b(mongodb|postgres|redis)://[^\\s/:]+:[^\\s@]+@", re.IGNORECASE)),
+    # Internal codenames / legacy identifiers should not appear in a public repo
+    ("internal_codename", re.compile(r"\b(cw|flc|cbx|cbe|corebe)\b", re.IGNORECASE)),
 ]
 
 

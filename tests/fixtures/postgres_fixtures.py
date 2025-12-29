@@ -6,8 +6,8 @@ import pytest
 import pytest_asyncio
 from asyncpg import Connection, Pool
 
-from app.cw.config import config
-from app.cw.storage.postgres import (
+from app.shared.config import config
+from app.shared.storage.postgres import (
     AsyncPGClient,
     ManagedAsyncPGClient,
     PgSession,

@@ -5,14 +5,14 @@ This script performs custom code quality checks on the WalletCast demo codebase.
 It's designed to be extensible with new lint rules.
 
 Active Rules:
-    FLC001: Only FlcError should be raised (not ValueError, Exception, etc.)
-    FLC002: No try-except blocks allowed in app/api/flc/ directory
-    FLC003: All FastAPI endpoints must return CwOut[T] or explicit response classes
+    API001: Only AppError should be raised (not ValueError, Exception, etc.)
+    API002: No try-except blocks allowed in app/api/v1/ directory
+    API003: All FastAPI endpoints must return ApiOut[T] or explicit response classes
 
 Disabling Rules:
     Use inline comments to disable specific rules:
-    - # noqa: FLC001           - Disable FLC001 on this line
-    - # noqa: FLC001, FLC002   - Disable multiple rules
+    - # noqa: API001           - Disable API001 on this line
+    - # noqa: API001, API002   - Disable multiple rules
     - # noqa                   - Disable all rules on this line
     - # type: ignore           - Also disables all rules (for compatibility)
 
@@ -28,7 +28,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
-# Pattern to match noqa comments like: # noqa: FLC001, FLC002 or just # noqa
+# Pattern to match noqa comments like: # noqa: API001, API002 or just # noqa
 NOQA_PATTERN = re.compile(
     r"#\s*noqa(?::\s*(?P<codes>[A-Z0-9,\s]+))?\s*$|#\s*type:\s*ignore",
     re.IGNORECASE,
@@ -41,7 +41,7 @@ def parse_noqa_comments(source: str) -> dict[int, set[str] | None]:
     Returns:
         Dict mapping line numbers to either:
         - None: all rules disabled on that line (# noqa or # type: ignore)
-        - set of rule IDs: specific rules disabled (# noqa: FLC001, FLC002)
+        - set of rule IDs: specific rules disabled (# noqa: API001, API002)
     """
     noqa_lines: dict[int, set[str] | None] = {}
     lines = source.splitlines()
@@ -51,7 +51,7 @@ def parse_noqa_comments(source: str) -> dict[int, set[str] | None]:
         if match:
             codes_str = match.group("codes")
             if codes_str:
-                # Specific codes: # noqa: FLC001, FLC002
+                # Specific codes: # noqa: API001, API002
                 codes = {code.strip().upper() for code in codes_str.split(",") if code.strip()}
                 noqa_lines[line_num] = codes
             else:
@@ -105,16 +105,16 @@ class LintRule(ABC):
         pass
 
 
-class OnlyFlcErrorRule(LintRule):
-    """Ensures only FlcError is raised in the codebase."""
+class OnlyAppErrorRule(LintRule):
+    """Ensures only AppError is raised in the codebase."""
 
     @property
     def rule_id(self) -> str:
-        return "FLC001"
+        return "API001"
 
     @property
     def description(self) -> str:
-        return "Only FlcError should be raised in application code"
+        return "Only AppError should be raised in application code"
 
     def check_file(self, file_path: Path, tree: ast.AST) -> list[LintViolation]:
         violations = []
@@ -133,7 +133,7 @@ class OnlyFlcErrorRule(LintRule):
                             file_path=file_path,
                             line_number=node.lineno,
                             column=node.col_offset,
-                            message=f"Raising '{exception_name}' is not allowed. Use FlcError instead.",
+                            message=f"Raising '{exception_name}' is not allowed. Use AppError instead.",
                             severity="error",
                         )
                     )
@@ -153,26 +153,26 @@ class OnlyFlcErrorRule(LintRule):
 
     def _is_allowed_exception(self, exception_name: str) -> bool:
         """Check if an exception is allowed to be raised."""
-        # Only FlcError is allowed
-        return exception_name == "FlcError"
+        # Only AppError is allowed
+        return exception_name == "AppError"
 
 
-class NoTryExceptInFlcRule(LintRule):
-    """Ensures no try-except blocks are used in the flc directory."""
+class NoTryExceptInV1ApiRule(LintRule):
+    """Ensures no try-except blocks are used in the API v1 directory."""
 
     @property
     def rule_id(self) -> str:
-        return "FLC002"
+        return "API002"
 
     @property
     def description(self) -> str:
-        return "No try-except blocks allowed in app/api/flc/ directory"
+        return "No try-except blocks allowed in app/api/ directory"
 
     def check_file(self, file_path: Path, tree: ast.AST) -> list[LintViolation]:
         violations = []
 
-        # Only check files in app/api/flc/ directory
-        if "app/api/flc" not in str(file_path):
+        # Only check files in app/api/v1 directory
+        if "app/api/v1" not in str(file_path):
             return violations
 
         for node in ast.walk(tree):
@@ -183,7 +183,7 @@ class NoTryExceptInFlcRule(LintRule):
                         file_path=file_path,
                         line_number=node.lineno,
                         column=node.col_offset,
-                        message="try-except blocks are not allowed in the flc directory. Use FlcError instead.",
+                        message="try-except blocks are not allowed in the API v1 directory. Use AppError instead.",
                         severity="error",
                     )
                 )
@@ -191,22 +191,22 @@ class NoTryExceptInFlcRule(LintRule):
         return violations
 
 
-class CwOutReturnTypeRule(LintRule):
-    """Ensures all FastAPI endpoints return CwOut[T] or explicit response classes."""
+class ApiOutReturnTypeRule(LintRule):
+    """Ensures all FastAPI endpoints return ApiOut[T] or explicit response classes."""
 
     @property
     def rule_id(self) -> str:
-        return "FLC003"
+        return "API003"
 
     @property
     def description(self) -> str:
-        return "All FastAPI endpoints must return CwOut[T] or explicit response classes"
+        return "All FastAPI endpoints must return ApiOut[T] or explicit response classes"
 
     def check_file(self, file_path: Path, tree: ast.AST) -> list[LintViolation]:
         violations = []
 
-        # Only check router files in app/api/flc/routers/
-        if "app/api/flc/routers" not in str(file_path):
+        # Only check router files in app/api/routers/
+        if "app/api/routers" not in str(file_path):
             return violations
 
         for node in ast.walk(tree):
@@ -223,7 +223,7 @@ class CwOutReturnTypeRule(LintRule):
                             file_path=file_path,
                             line_number=node.lineno,
                             column=node.col_offset,
-                            message=f"Endpoint '{node.name}' must have a return type annotation (CwOut[T] or response class).",
+                            message=f"Endpoint '{node.name}' must have a return type annotation (ApiOut[T] or response class).",
                             severity="error",
                         )
                     )
@@ -237,7 +237,7 @@ class CwOutReturnTypeRule(LintRule):
                             file_path=file_path,
                             line_number=node.lineno,
                             column=node.col_offset,
-                            message=f"Endpoint '{node.name}' must return CwOut[T] or an explicit response class (e.g., PlainTextResponse, JSONResponse).",
+                            message=f"Endpoint '{node.name}' must return ApiOut[T] or an explicit response class (e.g., PlainTextResponse, JSONResponse).",
                             severity="error",
                         )
                     )
@@ -263,12 +263,12 @@ class CwOutReturnTypeRule(LintRule):
         return False
 
     def _is_valid_return_type(self, return_type: ast.expr) -> bool:
-        """Check if return type is CwOut[T] or a valid response class."""
-        # Check for CwOut[T] pattern
+        """Check if return type is ApiOut[T] or a valid response class."""
+        # Check for ApiOut[T] pattern
         if (
             isinstance(return_type, ast.Subscript)
             and isinstance(return_type.value, ast.Name)
-            and return_type.value.id == "CwOut"
+            and return_type.value.id == "ApiOut"
         ):
             return True
 
@@ -296,9 +296,9 @@ class CodeLinter:
     def __init__(self, project_root: Path):
         self.project_root = project_root
         self.rules: list[LintRule] = [
-            OnlyFlcErrorRule(),
-            NoTryExceptInFlcRule(),
-            CwOutReturnTypeRule(),
+            OnlyAppErrorRule(),
+            NoTryExceptInV1ApiRule(),
+            ApiOutReturnTypeRule(),
         ]
 
     def get_python_files(self) -> list[Path]:
@@ -308,7 +308,7 @@ class CodeLinter:
             "__pycache__",
             ".pytest_cache",
             ".git",
-            "cw",  # Ignore the cw library
+            "shared",  # Ignore the shared library (treated as read-only in this repo)
         }
 
         python_files = []

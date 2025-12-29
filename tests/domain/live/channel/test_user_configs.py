@@ -5,7 +5,7 @@ import pytest
 from app.domain.live.channel.channel_domain import ChannelService
 from app.domain.live.channel.channel_models import ChannelCreateParams, UserConfigsUpdateParams
 from app.schemas import Channel
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -50,9 +50,9 @@ class TestUserConfigs:
         service: ChannelService,
     ):
         """Test getting user configs for non-existent channel."""
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.get_user_configs("non_existent_id", "user_123")
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_get_user_configs_wrong_user(
         self,
@@ -63,9 +63,9 @@ class TestUserConfigs:
         """Test getting user configs with wrong user."""
         channel_id, _ = existing_channel
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.get_user_configs(channel_id, "wrong_user")
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_update_user_configs_echo_cancellation(
         self,
@@ -139,9 +139,9 @@ class TestUserConfigs:
         """Test updating user configs for non-existent channel."""
         params = UserConfigsUpdateParams(echo_cancellation=False)
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.update_user_configs("non_existent_id", "user_123", params)
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_update_user_configs_wrong_user(
         self,
@@ -153,9 +153,9 @@ class TestUserConfigs:
         channel_id, _ = existing_channel
         params = UserConfigsUpdateParams(echo_cancellation=False)
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.update_user_configs(channel_id, "wrong_user", params)
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_update_user_configs_empty_params(
         self,

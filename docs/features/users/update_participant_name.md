@@ -6,7 +6,7 @@ This feature allows guests (participants) to update their display name while in 
 
 ## Endpoint
 
-**POST** `/flc/session/ingress/update_participant_name`
+**POST** `/session/ingress/update_participant_name`
 
 ### Request Body
 
@@ -40,7 +40,7 @@ Requires a valid authentication token. The participant can only update their own
 
 The feature is implemented across multiple layers:
 
-1. **API Layer** (`app/api/flc/routers/session_ingress.py`)
+1. **API Layer** (`app/api/routers/session_ingress.py`)
 
    - Endpoint: `update_participant_name()`
    - Validates user authorization
@@ -57,7 +57,7 @@ The feature is implemented across multiple layers:
    - `LivekitService.update_participant()`: RTC Provider API wrapper (demo-safe)
    - Uses provider SDK request types in non-demo mode
 
-4. **Schemas** (`app/api/flc/schemas/session_ingress.py`)
+4. **Schemas** (`app/api/schemas/session_ingress.py`)
    - `UpdateParticipantNameIn`: Request model
    - `UpdateParticipantNameOut`: Response model
 
@@ -79,7 +79,7 @@ import httpx
 async def update_my_name():
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://localhost:8000/flc/session/ingress/update_participant_name",
+            "http://localhost:8000/session/ingress/update_participant_name",
             json={
                 "room_id": "my-livestream",
                 "identity": "guest-123",

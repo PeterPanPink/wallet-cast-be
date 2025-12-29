@@ -56,19 +56,19 @@ from app.api.webhooks.schemas.mux import (
     MuxEventType,
 )
 from app.app_config import get_app_environ_config
-from app.cw.api.utils import ApiFailure, ApiSuccess, api_failure
+from app.shared.api.utils import ApiFailure, ApiSuccess, api_failure
 from app.domain.live.session.session_domain import SessionService
 from app.schemas import Channel, Session, SessionState
-from app.services.cbx_live.cbx_live_client import CbxLiveClient
-from app.services.cbx_live.cbx_live_schemas import (
+from app.services.integrations.external_live.external_live_client import ExternalLiveClient
+from app.services.integrations.external_live.external_live_schemas import (
     AdminStartLiveBody,
     AdminStopLiveBody,
-    CbxLiveApiSuccess,
+    ExternalLiveApiSuccess,
     ChannelConfig,
     SessionConfig,
 )
-from app.services.cw_mux import mux_service
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.services.integrations.mux_service import mux_service
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
@@ -113,24 +113,24 @@ def _parse_passthrough(passthrough: str | None) -> tuple[str | None, str | None,
     return room_id, channel_id, session_id
 
 
-def _get_cbx_live_client() -> CbxLiveClient | None:
-    """Get CBX Live client if configured."""
+def _get_external_live_client() -> ExternalLiveClient | None:
+    """Get External Live client if configured."""
     config = get_app_environ_config()
-    if not config.CBX_LIVE_BASE_URL:
-        logger.debug("CBX_LIVE_BASE_URL not configured, skipping CBX integration")
+    if not config.EXTERNAL_LIVE_BASE_URL:
+        logger.debug("EXTERNAL_LIVE_BASE_URL not configured, skipping External Live integration")
         return None
-    logger.debug(f"Initializing CBX Live client: base_url={config.CBX_LIVE_BASE_URL}")
-    return CbxLiveClient(
-        base_url=config.CBX_LIVE_BASE_URL,
-        api_key=config.CBX_LIVE_API_KEY,
+    logger.debug(f"Initializing External Live client: base_url={config.EXTERNAL_LIVE_BASE_URL}")
+    return ExternalLiveClient(
+        base_url=config.EXTERNAL_LIVE_BASE_URL,
+        api_key=config.EXTERNAL_LIVE_API_KEY,
     )
 
 
-async def _call_cbx_start_live(
+async def _call_external_live_start_live(
     session: Session,
     channel: Channel,
 ) -> str | None:
-    """Call CBX Live admin/live/start endpoint.
+    """Call External Live admin/live/start endpoint.
 
     Args:
         session: Session document with config containing Mux info
@@ -139,17 +139,17 @@ async def _call_cbx_start_live(
     Returns:
         post_id from response if successful, None otherwise
     """
-    client = _get_cbx_live_client()
+    client = _get_external_live_client()
     if not client:
-        # Generate mock post_id when cbx-live is not available
+        # Generate mock post_id when external-live is not available
         mock_post_id = f"mock_{uuid.uuid4().hex[:16]}"
-        logger.info(f"🔧 CBX Live not configured, using mock post_id: {mock_post_id}")
+        logger.info(f"🔧 External Live not configured, using mock post_id: {mock_post_id}")
         return mock_post_id
 
     # Check if post_id already exists
     if session.runtime.post_id:
         logger.info(
-            f"⏭️  CBX start_live already called for session {session.session_id}, "
+            f"⏭️  External Live start_live already called for session {session.session_id}, "
             f"post_id={session.runtime.post_id}, skipping"
         )
         return session.runtime.post_id
@@ -171,7 +171,7 @@ async def _call_cbx_start_live(
     )
 
     logger.debug(
-        f"Extracted session config for CBX start_live: "
+        f"Extracted session config for External Live start_live: "
         f"session_id={session.session_id}, user_id={session.user_id}, "
         f"channel_id={session.channel_id}, mux_stream_id={mux_stream_id}, "
         f"mux_rtmp_ingest_url={mux_rtmp_ingest_url}, live_playback_url={live_playback_url}"
@@ -199,31 +199,31 @@ async def _call_cbx_start_live(
         ),
     )
 
-    logger.info(f"📤 Calling CBX admin/live/start for session {session.session_id}")
-    logger.debug(f"CBX start_live request body: {body.model_dump_json(indent=2)}")
+    logger.info(f"📤 Calling External Live admin/live/start for session {session.session_id}")
+    logger.debug(f"External Live start_live request body: {body.model_dump_json(indent=2)}")
     response = await client.admin_start_live(body)
 
-    if not isinstance(response.root, CbxLiveApiSuccess):
-        raise FlcError(
-            errcode=FlcErrorCode.E_CBX_LIVE_ERROR,
-            errmesg=f"CBX admin/live/start failed: {response.root.errmesg}",
+    if not isinstance(response.root, ExternalLiveApiSuccess):
+        raise AppError(
+            errcode=AppErrorCode.E_EXTERNAL_LIVE_ERROR,
+            errmesg=f"External Live admin/live/start failed: {response.root.errmesg}",
         )
 
     post_id = response.root.results.post_id
-    logger.info(f"✅ CBX start_live returned post_id: {post_id}")
+    logger.info(f"✅ External Live start_live returned post_id: {post_id}")
     return post_id
 
 
-async def _call_cbx_stop_live(session: Session) -> bool:
-    """Call CBX Live admin/live/stop endpoint.
+async def _call_external_live_stop_live(session: Session) -> bool:
+    """Call External Live admin/live/stop endpoint.
 
     Args:
-        session: Session document with cbx_post_id in config
+        session: Session document with external_live_post_id in config
 
     Returns:
         True if successful, False otherwise
     """
-    client = _get_cbx_live_client()
+    client = _get_external_live_client()
     if not client:
         return False
 
@@ -233,12 +233,12 @@ async def _call_cbx_stop_live(session: Session) -> bool:
         post_id = config.post_id
 
         logger.debug(
-            f"Attempting CBX stop_live: session_id={session.session_id}, "
+            f"Attempting External Live stop_live: session_id={session.session_id}, "
             f"user_id={session.user_id}, post_id={post_id}"
         )
 
         if not post_id:
-            logger.warning(f"No cbx_post_id in session {session.session_id}, skipping stop_live")
+            logger.warning(f"No external_live_post_id in session {session.session_id}, skipping stop_live")
             return False
 
         body = AdminStopLiveBody(
@@ -247,15 +247,15 @@ async def _call_cbx_stop_live(session: Session) -> bool:
         )
 
         logger.info(
-            f"📤 Calling CBX admin/live/stop for session {session.session_id}, post_id={post_id}"
+            f"📤 Calling External Live admin/live/stop for session {session.session_id}, post_id={post_id}"
         )
-        logger.debug(f"CBX stop_live request body: {body.model_dump_json(indent=2)}")
+        logger.debug(f"External Live stop_live request body: {body.model_dump_json(indent=2)}")
         await client.admin_stop_live(body)
-        logger.info(f"✅ CBX stop_live completed for post_id: {post_id}")
+        logger.info(f"✅ External Live stop_live completed for post_id: {post_id}")
         return True
 
     except Exception as e:
-        logger.exception(f"Failed to call CBX admin/live/stop: {e}")
+        logger.exception(f"Failed to call External Live admin/live/stop: {e}")
         return False
 
 
@@ -289,10 +289,10 @@ def verify_mux_signature(
         elements[key] = value
 
     if "t" not in elements or "v1" not in elements:
-        raise FlcError(
-            errcode=FlcErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
+        raise AppError(
+            errcode=AppErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
             errmesg="Invalid signature header format - missing t or v1",
-            status_code=FlcStatusCode.BAD_REQUEST,
+            status_code=HttpStatusCode.BAD_REQUEST,
         )
 
     timestamp_str = elements["t"]
@@ -301,21 +301,21 @@ def verify_mux_signature(
     try:
         timestamp = int(timestamp_str)
     except ValueError as exc:
-        raise FlcError(
-            errcode=FlcErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
+        raise AppError(
+            errcode=AppErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
             errmesg=f"Invalid timestamp in signature: {timestamp_str}",
-            status_code=FlcStatusCode.BAD_REQUEST,
+            status_code=HttpStatusCode.BAD_REQUEST,
         ) from exc
 
     # Step 2: Check timestamp tolerance (prevent replay attacks)
     current_time = int(time.time())
     if abs(current_time - timestamp) > tolerance_seconds:
-        raise FlcError(
-            errcode=FlcErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
+        raise AppError(
+            errcode=AppErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
             errmesg=f"Timestamp outside tolerance window: "
             f"received={timestamp}, current={current_time}, "
             f"diff={abs(current_time - timestamp)}s",
-            status_code=FlcStatusCode.BAD_REQUEST,
+            status_code=HttpStatusCode.BAD_REQUEST,
         )
 
     # Step 3: Prepare signed payload
@@ -347,7 +347,7 @@ async def handle_live_stream_active(event: LiveStreamActiveEvent) -> dict[str, A
     """Handle video.live_stream.active event.
 
     This is an informational event indicating the stream is now active.
-    The actual LIVE transition and CBX notification happens in handle_asset_ready
+    The actual LIVE transition and External Live notification happens in handle_asset_ready
     when the DVR-enabled asset becomes available.
     """
     logger.info(f"🔴 LIVE STREAM ACTIVE: {event.data.id}")
@@ -360,7 +360,7 @@ async def handle_live_stream_idle(event: LiveStreamIdleEvent) -> dict[str, Any]:
     """Handle video.live_stream.idle event.
 
     When stream goes idle from ENDING state, transition to STOPPED
-    and call CBX admin/live/stop to notify the platform.
+    and call External Live admin/live/stop to notify the platform.
     """
     logger.info(f"⏸️  LIVE STREAM IDLE: {event.data.id}")
     logger.info(f"   Passthrough: {event.data.passthrough}")
@@ -406,16 +406,16 @@ async def handle_live_stream_idle(event: LiveStreamIdleEvent) -> dict[str, Any]:
             }
 
         # Only transition to STOPPED if in ENDING state
-        cbx_stopped = False
+        external_live_stopped = False
         logger.debug(
             f"Checking if session can transition to STOPPED: status={session.status.value}"
         )
 
         if session.status == SessionState.ENDING:
-            logger.debug(f"Session {session.session_id} in ENDING state, calling CBX stop_live")
-            # Call CBX admin/live/stop before transitioning
-            cbx_stopped = await _call_cbx_stop_live(session)
-            logger.debug(f"CBX stop_live result: {cbx_stopped}")
+            logger.debug(f"Session {session.session_id} in ENDING state, calling External Live stop_live")
+            # Call External Live admin/live/stop before transitioning
+            external_live_stopped = await _call_external_live_stop_live(session)
+            logger.debug(f"External Live stop_live result: {external_live_stopped}")
 
             logger.debug(f"Transitioning session {session.session_id}: ENDING -> STOPPED")
             await service.update_session_state(
@@ -428,7 +428,7 @@ async def handle_live_stream_idle(event: LiveStreamIdleEvent) -> dict[str, Any]:
                 "handled": True,
                 "session_id": session.session_id,
                 "new_status": SessionState.STOPPED.value,
-                "cbx_stopped": cbx_stopped,
+                "external_live_stopped": external_live_stopped,
             }
         else:
             logger.info(
@@ -463,7 +463,7 @@ async def handle_live_stream_disconnected(
     """Handle video.live_stream.disconnected event.
 
     When stream disconnects from ENDING state, transition to STOPPED
-    and call CBX admin/live/stop to notify the platform.
+    and call External Live admin/live/stop to notify the platform.
     """
     logger.info(f"🔌 LIVE STREAM DISCONNECTED: {event.data.id}")
     logger.info(f"   Passthrough: {event.data.passthrough}")
@@ -509,16 +509,16 @@ async def handle_live_stream_disconnected(
             }
 
         # Only transition to STOPPED if in ENDING state
-        cbx_stopped = False
+        external_live_stopped = False
         logger.debug(
             f"Checking if session can transition to STOPPED: status={session.status.value}"
         )
 
         if session.status == SessionState.ENDING:
-            logger.debug(f"Session {session.session_id} in ENDING state, calling CBX stop_live")
-            # Call CBX admin/live/stop before transitioning
-            cbx_stopped = await _call_cbx_stop_live(session)
-            logger.debug(f"CBX stop_live result: {cbx_stopped}")
+            logger.debug(f"Session {session.session_id} in ENDING state, calling External Live stop_live")
+            # Call External Live admin/live/stop before transitioning
+            external_live_stopped = await _call_external_live_stop_live(session)
+            logger.debug(f"External Live stop_live result: {external_live_stopped}")
 
             logger.debug(f"Transitioning session {session.session_id}: ENDING -> STOPPED")
             await service.update_session_state(
@@ -531,7 +531,7 @@ async def handle_live_stream_disconnected(
                 "handled": True,
                 "session_id": session.session_id,
                 "new_status": SessionState.STOPPED.value,
-                "cbx_stopped": cbx_stopped,
+                "external_live_stopped": external_live_stopped,
             }
         else:
             logger.warning(
@@ -574,7 +574,7 @@ async def handle_asset_ready(event: AssetReadyEvent) -> dict[str, Any]:
     1. Transition the session from PUBLISHING to LIVE
     2. Update the session's live_playback_url to use the asset's playback_id
        (enables DVR mode with full timeline from beginning)
-    3. Call CBX admin/live/start to notify the platform
+    3. Call External Live admin/live/start to notify the platform
 
     Using the stream's playback_id only shows ~30 seconds of recent content (non-DVR mode),
     while using the asset's playback_id shows the full timeline from the beginning (DVR mode).
@@ -700,13 +700,13 @@ async def handle_asset_ready(event: AssetReadyEvent) -> dict[str, Any]:
             max_retry_on_conflicts=2,
         )
 
-        # Call CBX and transition to LIVE state
+        # Call External Live and transition to LIVE state
         service = SessionService()
-        cbx_post_id = None
+        external_live_post_id = None
         logger.debug(f"Current session status: {session.status.value}")
 
         if session.status == SessionState.PUBLISHING:
-            # Call CBX admin/live/start BEFORE updating state
+            # Call External Live admin/live/start BEFORE updating state
             logger.debug(f"Looking up channel: {session.channel_id}")
             channel = await Channel.find_one(Channel.channel_id == session.channel_id)
             if not channel:
@@ -721,16 +721,16 @@ async def handle_asset_ready(event: AssetReadyEvent) -> dict[str, Any]:
                 }
 
             logger.debug(f"Found channel: {channel.channel_id}, title={channel.title}")
-            cbx_post_id = await _call_cbx_start_live(session, channel)
-            if cbx_post_id:
+            external_live_post_id = await _call_external_live_start_live(session, channel)
+            if external_live_post_id:
                 # Store post_id in session config for later stop_live call
-                session.runtime.post_id = cbx_post_id
+                session.runtime.post_id = external_live_post_id
                 await session.partial_update_session_with_version_check(
                     {Session.runtime.post_id: session.runtime.post_id},
                     max_retry_on_conflicts=2,
                 )
 
-            # Now transition to LIVE state after CBX call succeeds
+            # Now transition to LIVE state after External Live call succeeds
             logger.debug(
                 f"Transitioning session {session.session_id}: {session.status.value} -> LIVE"
             )
@@ -757,7 +757,7 @@ async def handle_asset_ready(event: AssetReadyEvent) -> dict[str, Any]:
             "dvr_playback_url": dvr_playback_url,
             "dvr_updated": True,
             "new_status": SessionState.LIVE.value,
-            "cbx_post_id": cbx_post_id,
+            "external_live_post_id": external_live_post_id,
         }
 
     except Exception as e:
@@ -954,7 +954,7 @@ async def mux_webhook(
         if not signing_secret:
             logger.error("MUX_WEBHOOK_SIGNING_SECRET not configured")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_CONFIG_MISSING,
+                errcode=AppErrorCode.E_WEBHOOK_CONFIG_MISSING,
                 errmesg="Webhook signing secret not configured",
             )
             return failure
@@ -970,7 +970,7 @@ async def mux_webhook(
                 if not is_valid:
                     logger.warning("Invalid Mux webhook signature")
                     failure = api_failure(
-                        errcode=FlcErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
+                        errcode=AppErrorCode.E_WEBHOOK_INVALID_SIGNATURE,
                         errmesg="Invalid webhook signature",
                     )
                     return failure
@@ -978,7 +978,7 @@ async def mux_webhook(
             except ValueError as exc:
                 logger.warning(f"Signature verification failed: {exc}")
                 failure = api_failure(
-                    errcode=FlcErrorCode.E_WEBHOOK_SIGNATURE_ERROR,
+                    errcode=AppErrorCode.E_WEBHOOK_SIGNATURE_ERROR,
                     errmesg=str(exc),
                 )
                 return failure
@@ -993,7 +993,7 @@ async def mux_webhook(
         except json.JSONDecodeError as exc:
             logger.error(f"Invalid JSON in webhook body: {exc}")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_INVALID_JSON,
+                errcode=AppErrorCode.E_WEBHOOK_INVALID_JSON,
                 errmesg=f"Invalid JSON: {exc!s}",
             )
             return failure
@@ -1006,7 +1006,7 @@ async def mux_webhook(
         if not event_type:
             logger.error("Missing 'type' field in webhook payload")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_MISSING_EVENT_TYPE,
+                errcode=AppErrorCode.E_WEBHOOK_MISSING_EVENT_TYPE,
                 errmesg="Missing 'type' field",
             )
             return failure
@@ -1073,7 +1073,7 @@ async def mux_webhook(
             logger.error(f"Failed to parse {event_type} event: {exc}")
             logger.error(f"❌ VALIDATION ERROR: {exc}")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_VALIDATION_ERROR,
+                errcode=AppErrorCode.E_WEBHOOK_VALIDATION_ERROR,
                 errmesg=f"Failed to parse event: {exc!s}",
             )
             return failure
@@ -1085,7 +1085,7 @@ async def mux_webhook(
     except Exception as exc:
         logger.exception("Error processing Mux webhook")
         failure = api_failure(
-            errcode=FlcErrorCode.E_WEBHOOK_ERROR,
+            errcode=AppErrorCode.E_WEBHOOK_ERROR,
             errmesg=str(exc),
         )
         return failure

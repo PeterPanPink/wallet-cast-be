@@ -15,12 +15,12 @@ from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.flc.errors import app_error_handler, twirp_error_handler
-from app.cw.api.utils import E_INVALID_PARAMS, api_failure, init_logger, load_routes
-from app.cw.config import config
-from app.cw.storage.redis import get_redis_manager
+from app.api.v1.errors import app_error_handler, twirp_error_handler
+from app.shared.api.utils import E_INVALID_PARAMS, api_failure, init_logger, load_routes
+from app.shared.config import config
+from app.shared.storage.redis import get_redis_manager
 from app.schemas.init_schemas import init_schema
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 class HTTPLoggingMiddleware(BaseHTTPMiddleware):
@@ -61,7 +61,7 @@ class HTTPLoggingMiddleware(BaseHTTPMiddleware):
 
             # Return a proper JSON error response
             failure = api_failure(
-                errcode=FlcErrorCode.E_INTERNAL_ERROR,
+                errcode=AppErrorCode.E_INTERNAL_ERROR,
                 errmesg=f"Internal server error (request_id: {request_id})",
             )
             return ORJSONResponse(
@@ -154,7 +154,7 @@ app.add_middleware(
 )
 
 app.add_exception_handler(RequestValidationError, app_validation_exception_handler)  # type: ignore
-app.add_exception_handler(FlcError, app_error_handler)  # type: ignore
+app.add_exception_handler(AppError, app_error_handler)  # type: ignore
 app.add_exception_handler(TwirpError, twirp_error_handler)  # type: ignore
 
 

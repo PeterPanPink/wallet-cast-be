@@ -4,9 +4,9 @@ from loguru import logger
 from redis.exceptions import RedisError
 
 from app.app_config import get_app_environ_config
-from app.cw.config import custom_config
-from app.cw.lock import LockManager
-from app.cw.storage.redis import get_redis_client
+from app.shared.config import custom_config
+from app.shared.lock import LockManager
+from app.shared.storage.redis import get_redis_client
 from app.schemas.user_configs import UserConfigs
 
 from ._channels import ChannelOperations
@@ -44,7 +44,7 @@ class ChannelService:
     ) -> ChannelResponse:
         """Update channel metadata for the given user.
 
-        Raises FlcError if channel not found/unauthorized.
+        Raises AppError if channel not found/unauthorized.
         """
         return await self._channels.update_channel(
             channel_id=channel_id,
@@ -59,7 +59,7 @@ class ChannelService:
     ) -> ChannelResponse:
         """Get a single channel by ID with optional user ownership check.
 
-        Raises FlcError if channel not found.
+        Raises AppError if channel not found.
         """
         return await self._channels.get_channel(
             channel_id=channel_id,

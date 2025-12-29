@@ -6,20 +6,20 @@ Cast Backend is a Python-based modular system using **FastAPI**, **Beanie (Mongo
 
 ## 🚨 Critical Rules (Zero Tolerance)
 
-1.  **`app/cw` is Read-Only**: This is a shared library submodule. **NEVER** modify files in `app/cw/`. Only import public APIs (`app.cw.storage.*`, `app.cw.config`, etc.).
+1.  **`app/shared` is Read-Only**: This is a shared library submodule. **NEVER** modify files in `app/shared/`. Only import public APIs (`app.shared.storage.*`, `app.shared.config`, etc.).
 2.  **No Proactive Docs**: Do not create `*.md` files unless explicitly asked.
 3.  **Prefer Editing**: Modify existing files over creating new ones.
 4.  **No Raw Dicts**: Use **Pydantic** models for API schemas and **Beanie** models for MongoDB.
 5.  **No Literal Strings**: Use **Enums** for status codes, types, modes, etc.
 6.  **Single Responsibility**: Each class/function must have exactly one responsibility.
-7.  **Only Raise FlcError**: Only `FlcError` is allowed to be raised in this project.
+7.  **Only Raise AppError**: Only `AppError` is allowed to be raised in this project.
 
 ## 🏗️ Architecture & Patterns
 
 ### Directory Structure
 
-- `app/api/flc`: Main application API logic (Cast).
-- `app/cw`: **READ-ONLY** shared core library (Storage, Config, Utils).
+- `app/api/v1`: Main application API logic (Cast).
+- `app/shared`: **READ-ONLY** shared core library (Storage, Config, Utils).
 - `app/domain`: Core business logic and domain services (e.g., Session management, Channel operations).
 - `app/services`: External service integrations (LiveKit, Mux, Translator).
 - `app/workers`: ARQ background workers (e.g., `caption_agent_worker.py`).
@@ -29,7 +29,7 @@ Cast Backend is a Python-based modular system using **FastAPI**, **Beanie (Mongo
 
 - **MongoDB**: Use **Beanie** ODMs located in `app/schemas`.
   - Example: `await Session.find_one(Session.id == session_id)`
-- **Redis**: Use `app.cw.storage.redis.get_redis_manager` or `get_redis_client`.
+- **Redis**: Use `app.shared.storage.redis.get_redis_manager` or `get_redis_client`.
 
 ### Service Layer
 
@@ -38,7 +38,7 @@ Cast Backend is a Python-based modular system using **FastAPI**, **Beanie (Mongo
 
 ### Error Handling
 
-- Use `app.api.flc.errors.FlcError` for business logic errors.
+- Use `app.utils.app_errors.AppError` for business logic errors.
 - Do not return raw 400/500 responses manually in routers.
 
 ## 🛠️ Developer Workflows
@@ -71,4 +71,4 @@ Cast Backend is a Python-based modular system using **FastAPI**, **Beanie (Mongo
 
 - `app/main.py`: Application entry point.
 - `app/workers/caption_agent_worker.py`: Example of LiveKit agent worker.
-- `app/api/flc/routers`: API route definitions.
+- `app/api/v1/routers`: API route definitions.

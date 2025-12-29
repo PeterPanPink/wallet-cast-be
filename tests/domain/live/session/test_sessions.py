@@ -12,7 +12,7 @@ from app.domain.live.session.session_models import (
 )
 from app.schemas import Channel, Session, SessionState
 from app.schemas.session_runtime import SessionRuntime
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -135,9 +135,9 @@ class TestCreateSession:
         )
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.create_session(params)
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_create_session_user_mismatch(self, beanie_db):
         """Test create session fails when user_id doesn't match channel owner."""
@@ -159,9 +159,9 @@ class TestCreateSession:
         )
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.create_session(params)
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_create_session_active_session_exists(self, beanie_db):
         """Test create session fails when active session already exists for channel."""
@@ -196,9 +196,9 @@ class TestCreateSession:
         )
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.create_session(params)
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_EXISTS
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_EXISTS
 
     async def test_create_session_end_existing_flag(self, beanie_db):
         """Test create session with end_existing=True ends existing session."""
@@ -277,14 +277,14 @@ class TestGetSession:
         assert result.status == SessionState.READY
 
     async def test_get_session_not_found(self, beanie_db):
-        """Test getting a non-existent session raises FlcError."""
+        """Test getting a non-existent session raises AppError."""
         # Arrange
         ops = SessionOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_session("se_nonexistent")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -329,9 +329,9 @@ class TestGetActiveSessionByRoomId:
         await session.insert()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_active_session_by_room_id("ro_stopped_room")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
     async def test_get_active_session_not_found_no_room(self, beanie_db):
         """Test getting active session fails when room doesn't exist."""
@@ -339,9 +339,9 @@ class TestGetActiveSessionByRoomId:
         ops = SessionOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_active_session_by_room_id("ro_nonexistent")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -379,9 +379,9 @@ class TestGetLastSessionByRoomId:
         ops = SessionOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_last_session_by_room_id("ro_nonexistent")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -428,9 +428,9 @@ class TestGetActiveSessionByChannel:
         await session.insert()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_active_session_by_channel("ch_stopped")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -752,12 +752,12 @@ class TestUpdateSession:
         assert saved.title == "New Title"
 
     async def test_update_session_not_found(self, beanie_db):
-        """Test updating non-existent session raises FlcError."""
+        """Test updating non-existent session raises AppError."""
         # Arrange
         ops = SessionOperations()
         params = SessionUpdateParams(title="New Title")
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.update_session("se_nonexistent", params)
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND

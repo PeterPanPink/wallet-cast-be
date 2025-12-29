@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from app.api.admin.config import YamlConvertParams, router
-from app.cw.api.utils import verify_api_key
+from app.shared.api.utils import verify_api_key
 
 
 @pytest.fixture(scope="module")

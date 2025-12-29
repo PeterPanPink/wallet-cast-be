@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, ORJSONResponse
 
-from app.cw.config import config
+from app.shared.config import config
 
 router = APIRouter()
 

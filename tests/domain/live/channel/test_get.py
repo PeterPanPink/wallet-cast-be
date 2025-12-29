@@ -4,7 +4,7 @@ import pytest
 
 from app.domain.live.channel.channel_domain import ChannelService
 from app.domain.live.channel.channel_models import ChannelCreateParams
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -62,10 +62,10 @@ class TestGetChannel:
         beanie_db,
         service: ChannelService,
     ):
-        """Test getting non-existent channel raises FlcError."""
-        with pytest.raises(FlcError) as exc_info:
+        """Test getting non-existent channel raises AppError."""
+        with pytest.raises(AppError) as exc_info:
             await service.get_channel("non_existent_channel_id")
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_get_channel_wrong_user(
         self,
@@ -73,12 +73,12 @@ class TestGetChannel:
         service: ChannelService,
         existing_channel: tuple[str, str],
     ):
-        """Test getting channel with wrong user raises FlcError."""
+        """Test getting channel with wrong user raises AppError."""
         channel_id, _ = existing_channel
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.get_channel(channel_id, user_id="wrong_user")
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_get_channel_returns_all_fields(
         self,

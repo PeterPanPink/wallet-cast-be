@@ -218,7 +218,7 @@ def generate_m3u8_playlist(
         [
             '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="Original",'
             "DEFAULT=YES,AUTOSELECT=YES,FORCED=NO,"
-            f'URI="{base_url}/flc/session/egress/caption/{session_id}/captions.vtt"',
+            f'URI="{base_url}/session/egress/caption/{session_id}/captions.vtt"',
             "",
         ]
     )
@@ -231,7 +231,7 @@ def generate_m3u8_playlist(
                 [
                     f'#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="{lang_name}",'
                     "DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,"
-                    f'URI="{base_url}/flc/session/egress/caption/{session_id}/captions.vtt?language={lang}"',
+                    f'URI="{base_url}/session/egress/caption/{session_id}/captions.vtt?language={lang}"',
                     "",
                 ]
             )
@@ -285,7 +285,7 @@ def generate_master_m3u8_playlist(
     lines.append(
         '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="English",'
         'LANGUAGE="en",DEFAULT=YES,AUTOSELECT=YES,FORCED=NO,'
-        f'URI="{base_url}/flc/session/egress/caption/{session_id}/captions.m3u8"'
+        f'URI="{base_url}/session/egress/caption/{session_id}/captions.m3u8"'
     )
 
     # Add translated subtitle tracks
@@ -294,7 +294,7 @@ def generate_master_m3u8_playlist(
         lines.append(
             f'#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",NAME="{lang_name}",'
             f'LANGUAGE="{lang_code}",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,'
-            f'URI="{base_url}/flc/session/egress/caption/{session_id}/captions.m3u8?language={lang_code}"'
+            f'URI="{base_url}/session/egress/caption/{session_id}/captions.m3u8?language={lang_code}"'
         )
 
     lines.append("")
@@ -360,7 +360,7 @@ async def generate_m3u8_playlist_segmented(
     for seg_num in range(media_sequence, latest_segment + 1):
         lines.append("#EXTINF:4.0,")
         lines.append(
-            f"{base_url}/flc/session/egress/caption/{session_id}/captions-{seg_num}.vtt{lang_param}"
+            f"{base_url}/session/egress/caption/{session_id}/captions-{seg_num}.vtt{lang_param}"
         )
 
     return "\n".join(lines)

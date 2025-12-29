@@ -11,7 +11,7 @@ import httpx
 
 # Configuration
 API_BASE = "http://localhost:8000"  # Adjust for your deployment
-ENDPOINT = f"{API_BASE}/api/v1/flc/session/ingress/update_room_metadata"
+ENDPOINT = f"{API_BASE}/api/v1/session/ingress/update_room_metadata"
 
 
 async def update_room_metadata(room_name: str, metadata: dict[str, Any]) -> dict[str, Any]:

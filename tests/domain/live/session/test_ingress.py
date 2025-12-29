@@ -8,7 +8,7 @@ import pytest
 
 from app.domain.live.session._ingress import IngressOperations
 from app.schemas import Session, SessionState
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @dataclass
@@ -139,9 +139,9 @@ class TestDeleteRoom:
         ops = IngressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.delete_room(room_name="nonexistent-room")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 class TestGetHostAccessToken:
@@ -198,12 +198,12 @@ class TestGetHostAccessToken:
         ops = IngressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_host_access_token(
                 identity="host-123",
                 room_name="nonexistent-room",
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 class TestGetGuestAccessToken:
@@ -295,12 +295,12 @@ class TestGetGuestAccessToken:
         ops = IngressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_guest_access_token(
                 identity="viewer-456",
                 room_name="nonexistent-room",
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 class TestGetRecorderAccessToken:
@@ -347,9 +347,9 @@ class TestGetRecorderAccessToken:
         ops = IngressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.get_recorder_access_token(room_name="nonexistent-room")
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 class TestUpdateRoomMetadata:
@@ -401,12 +401,12 @@ class TestUpdateRoomMetadata:
         ops = IngressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.update_room_metadata(
                 room_name="nonexistent-room",
                 metadata='{"test":"data"}',
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND
 
 
 class TestUpdateParticipant:
@@ -463,10 +463,10 @@ class TestUpdateParticipant:
         ops = IngressOperations()
 
         # Act & Assert
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await ops.update_participant(
                 room_name="nonexistent-room",
                 identity="guest-123",
                 name="New Name",
             )
-        assert exc_info.value.errcode == FlcErrorCode.E_SESSION_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_SESSION_NOT_FOUND

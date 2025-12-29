@@ -5,7 +5,7 @@ import pytest
 from app.domain.live.channel.channel_domain import ChannelService
 from app.domain.live.channel.channel_models import ChannelCreateParams, ChannelUpdateParams
 from app.schemas import Channel
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 
 @pytest.mark.usefixtures("clear_collections")
@@ -118,12 +118,12 @@ class TestUpdateChannel:
         beanie_db,
         service: ChannelService,
     ):
-        """Test updating non-existent channel raises FlcError."""
+        """Test updating non-existent channel raises AppError."""
         params = ChannelUpdateParams(title="New Title")
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.update_channel("non_existent_id", "user_123", params)
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_update_channel_wrong_user(
         self,
@@ -131,14 +131,14 @@ class TestUpdateChannel:
         service: ChannelService,
         existing_channel: tuple[str, str],
     ):
-        """Test updating channel with wrong user raises FlcError."""
+        """Test updating channel with wrong user raises AppError."""
         channel_id, _ = existing_channel
 
         params = ChannelUpdateParams(title="Hacker Title")
 
-        with pytest.raises(FlcError) as exc_info:
+        with pytest.raises(AppError) as exc_info:
             await service.update_channel(channel_id, "wrong_user", params)
-        assert exc_info.value.errcode == FlcErrorCode.E_CHANNEL_NOT_FOUND
+        assert exc_info.value.errcode == AppErrorCode.E_CHANNEL_NOT_FOUND
 
     async def test_update_channel_no_changes(
         self,
@@ -226,7 +226,7 @@ class TestUpdateChannel:
         service: ChannelService,
     ):
         """Test that channel updates only sync to active sessions, not stopped ones."""
-        from app.cw.domain.entity_change import utc_now
+        from app.shared.domain.entity_change import utc_now
         from app.domain.live.session.session_domain import SessionService
         from app.domain.live.session.session_models import SessionCreateParams
         from app.schemas import Session

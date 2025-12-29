@@ -79,8 +79,8 @@ services:
   # Services
   # ============================================================================
 
-  # Mock core-be service for local development
-  mock-corebe:
+  # Mock core-api service for local development
+  mock-core_api:
     build:
       context: .
       dockerfile: Dockerfile
@@ -90,12 +90,12 @@ services:
     env_file:
       - env.example
     environment:
-      - MOCK_COREBE_VERIFY_EXP=1761966349
+      - MOCK_CORE_API_VERIFY_EXP=1761966349
     ports:
       - "18080:18080"
     volumes:
-      - ./app:/cw_app/app:ro
-      - ./tools/mock_corebe.py:/cw_app/tools/mock_corebe.py:ro
+      - ./app:/app/app:ro
+      - ./tools/mock_core_api.py:/app/tools/mock_core_api.py:ro
     networks:
       - local-network
     depends_on:
@@ -114,13 +114,13 @@ services:
         "--workers",
         "1",
         "--reload",
-        "tools.mock_corebe:app",
+        "tools.mock_core_api:app",
       ]
     labels:
       - "type=service"
 
-  # Mock cbx-live service for local development
-  mock-cbx-live:
+  # Mock external-live service for local development
+  mock-external-live:
     build:
       context: .
       dockerfile: Dockerfile
@@ -130,8 +130,8 @@ services:
     ports:
       - "18081:18081"
     volumes:
-      - ./app:/cw_app/app:ro
-      - ./tools/mock_cbx_live.py:/cw_app/tools/mock_cbx_live.py:ro
+      - ./app:/app/app:ro
+      - ./tools/mock_external_live.py:/app/tools/mock_external_live.py:ro
     networks:
       - local-network
     depends_on:
@@ -150,7 +150,7 @@ services:
         "--workers",
         "1",
         "--reload",
-        "tools.mock_cbx_live:app",
+        "tools.mock_external_live:app",
       ]
     labels:
       - "type=service"
@@ -171,8 +171,8 @@ services:
     ports:
       - "${API_PORT:-8000}:${API_PORT:-8000}"
     volumes:
-      - ./app:/cw_app/app:ro
-      - ./logs:/cw_app/logs
+      - ./app:/app/app:ro
+      - ./logs:/app/logs
     networks:
       - local-network
     depends_on:
@@ -182,9 +182,9 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-      mock-corebe:
+      mock-core_api:
         condition: service_started
-      mock-cbx-live:
+      mock-external-live:
         condition: service_started
     restart: unless-stopped
     command:
@@ -215,8 +215,8 @@ services:
     environment:
       - RUN_MODE=caption_agent_worker
     volumes:
-      - ./app:/cw_app/app:ro
-      - ./logs:/cw_app/logs
+      - ./app:/app/app:ro
+      - ./logs:/app/logs
     networks:
       - local-network
     depends_on:
@@ -242,8 +242,8 @@ services:
     environment:
       - RUN_MODE=api_jobs_worker
     volumes:
-      - ./app:/cw_app/app:ro
-      - ./logs:/cw_app/logs
+      - ./app:/app/app:ro
+      - ./logs:/app/logs
     networks:
       - local-network
     depends_on:
@@ -272,12 +272,12 @@ services:
   #   env_file:
   #     - env.example
   #   volumes:
-  #     - ./app:/cw_app/app:ro
-  #     - ./pyproject.toml:/cw_app/pyproject.toml:ro
-  #     - ./uv.lock:/cw_app/uv.lock:ro
-  #     - ./data:/cw_app/data:ro
-  #     - ./tools/init_data.py:/cw_app/tools/init_data.py:ro
-  #   working_dir: /cw_app
+  #     - ./app:/app/app:ro
+  #     - ./pyproject.toml:/app/pyproject.toml:ro
+  #     - ./uv.lock:/app/uv.lock:ro
+  #     - ./data:/app/data:ro
+  #     - ./tools/init_data.py:/app/tools/init_data.py:ro
+  #   working_dir: /app
   #   networks:
   #     - local-network
   #   command: >

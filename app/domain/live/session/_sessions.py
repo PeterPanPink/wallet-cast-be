@@ -10,12 +10,12 @@ from pymongo import DESCENDING
 from pymongo.errors import DuplicateKeyError
 
 from app.app_config import get_app_environ_config
-from app.cw.domain.entity_change import dt_to_ms, utc_now
+from app.shared.domain.entity_change import dt_to_ms, utc_now
 from app.schemas import Channel, Session, SessionState
 from app.schemas.session_runtime import SessionRuntime
-from app.services.cbx_live.cbx_live_client import CbxLiveClient
-from app.services.cbx_live.cbx_live_schemas import AdminUpdateLiveBody
-from app.utils.flc_errors import FlcError, FlcErrorCode, FlcStatusCode
+from app.services.integrations.external_live.external_live_client import ExternalLiveClient
+from app.services.integrations.external_live.external_live_schemas import AdminUpdateLiveBody
+from app.utils.app_errors import AppError, AppErrorCode, HttpStatusCode
 
 from ...utils.idgen import new_room_id, new_session_id
 from ._base import BaseService
@@ -45,10 +45,10 @@ class SessionOperations(BaseService):
             Channel.user_id == params.user_id,
         )
         if not channel:
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {params.channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Check for existing active session
@@ -74,10 +74,10 @@ class SessionOperations(BaseService):
                 )
                 await end_ops.end_session(existing.session_id)
             else:
-                raise FlcError(
-                    errcode=FlcErrorCode.E_SESSION_EXISTS,
+                raise AppError(
+                    errcode=AppErrorCode.E_SESSION_EXISTS,
                     errmesg=f"Active session already exists for channel {params.channel_id}: {existing.session_id}",
-                    status_code=FlcStatusCode.CONFLICT,
+                    status_code=HttpStatusCode.CONFLICT,
                 )
 
         # Create new session
@@ -125,10 +125,10 @@ class SessionOperations(BaseService):
             logger.warning(
                 f"Duplicate key error creating session for channel {params.channel_id}: {e}"
             )
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_EXISTS,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_EXISTS,
                 errmesg=f"Active session already exists for channel {params.channel_id}",
-                status_code=FlcStatusCode.CONFLICT,
+                status_code=HttpStatusCode.CONFLICT,
             ) from e
 
         # Sync session fields back to channel if they were explicitly provided
@@ -156,14 +156,14 @@ class SessionOperations(BaseService):
         Get a single session by session_id.
 
         Returns SessionResponse.
-        Raises FlcError if session not found.
+        Raises AppError if session not found.
         """
         session = await self._get_session_by_id(session_id)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found: {session_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return SessionResponse(**session.model_dump(exclude={"id"}, mode="json"))
@@ -176,14 +176,14 @@ class SessionOperations(BaseService):
         Get an active session by room_id.
 
         Returns SessionResponse.
-        Raises FlcError if no active session found for room_id.
+        Raises AppError if no active session found for room_id.
         """
         session = await self._get_active_session_by_room_id(room_id)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"No active session found for room_id: {room_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return SessionResponse(**session.model_dump(exclude={"id"}, mode="json"))
@@ -196,14 +196,14 @@ class SessionOperations(BaseService):
         Get the most recent session by room_id (regardless of status).
 
         Returns SessionResponse.
-        Raises FlcError if no session found for room_id.
+        Raises AppError if no session found for room_id.
         """
         session = await self._get_last_session_by_room_id(room_id)
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"No session found for room_id: {room_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return SessionResponse(**session.model_dump(exclude={"id"}, mode="json"))
@@ -216,17 +216,17 @@ class SessionOperations(BaseService):
         Get the active session for a channel.
 
         Returns SessionResponse.
-        Raises FlcError if no active session found for channel.
+        Raises AppError if no active session found for channel.
         """
         session = await Session.find_one(
             Session.channel_id == channel_id,
             In(Session.status, SessionState.active_states()),
         )
         if not session:
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"No active session found for channel: {channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         return SessionResponse(**session.model_dump(exclude={"id"}, mode="json"))
@@ -249,10 +249,10 @@ class SessionOperations(BaseService):
         """
         # Verify the session is actually stopped
         if stopped_session.status != SessionState.STOPPED:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg=f"Can only recreate from STOPPED session, got: {stopped_session.status}",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
 
         # Get the channel to verify it exists
@@ -260,10 +260,10 @@ class SessionOperations(BaseService):
             Channel.channel_id == stopped_session.channel_id,
         )
         if not channel:
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {stopped_session.channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Create new session with READY state
@@ -341,15 +341,15 @@ class SessionOperations(BaseService):
 
         Raises:
             ValueError: If session is not in a terminal state (STOPPED or CANCELLED)
-            FlcError: If channel is not found or inactive
+            AppError: If channel is not found or inactive
         """
         # Verify the session is in a terminal state
         terminal_states = {SessionState.STOPPED, SessionState.CANCELLED}
         if terminal_session.status not in terminal_states:
-            raise FlcError(
-                errcode=FlcErrorCode.E_INVALID_REQUEST,
+            raise AppError(
+                errcode=AppErrorCode.E_INVALID_REQUEST,
                 errmesg=f"Can only recreate from terminal session (STOPPED or CANCELLED), got: {terminal_session.status}",
-                status_code=FlcStatusCode.BAD_REQUEST,
+                status_code=HttpStatusCode.BAD_REQUEST,
             )
 
         # Get the channel to verify it exists
@@ -357,10 +357,10 @@ class SessionOperations(BaseService):
             Channel.channel_id == terminal_session.channel_id,
         )
         if not channel:
-            raise FlcError(
-                errcode=FlcErrorCode.E_CHANNEL_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_CHANNEL_NOT_FOUND,
                 errmesg=f"Channel not found: {terminal_session.channel_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Create new session with READY state
@@ -507,20 +507,20 @@ class SessionOperations(BaseService):
         Update session metadata.
 
         When title, description, or cover are updated, also updates the associated
-        channel and synchronizes with CBX Live platform if the session is live.
+        channel and synchronizes with External Live platform if the session is live.
 
         Returns SessionResponse.
-        Raises FlcError if session not found.
+        Raises AppError if session not found.
         Raises ValueError for validation errors.
         """
         # Find the session
         session = await Session.find_one(Session.session_id == session_id)
         if not session:
             logger.warning(f"Session {session_id} not found")
-            raise FlcError(
-                errcode=FlcErrorCode.E_SESSION_NOT_FOUND,
+            raise AppError(
+                errcode=AppErrorCode.E_SESSION_NOT_FOUND,
                 errmesg=f"Session not found: {session_id}",
-                status_code=FlcStatusCode.NOT_FOUND,
+                status_code=HttpStatusCode.NOT_FOUND,
             )
 
         # Get updates dict excluding unset and None values
@@ -553,7 +553,7 @@ class SessionOperations(BaseService):
                 max_retry_on_conflicts=2,
             )
 
-            # Check if title, description, or cover changed - sync to channel and CBX
+            # Check if title, description, or cover changed - sync to channel and External Live
             sync_fields = {"title", "description", "cover"}
             changed_sync_fields = sync_fields.intersection(changed_keys)
 
@@ -561,9 +561,9 @@ class SessionOperations(BaseService):
                 # Update the channel with the same changes
                 await self._sync_channel_fields(session, updates, changed_sync_fields)
 
-                # Sync to CBX Live if the session has a post_id (is live)
+                # Sync to External Live if the session has a post_id (is live)
                 if session.runtime and session.runtime.post_id:
-                    await self._sync_cbx_live(session)
+                    await self._sync_external_live(session)
 
         return SessionResponse(**session.model_dump(exclude={"id"}, mode="json"))
 
@@ -596,34 +596,34 @@ class SessionOperations(BaseService):
                 f"to channel {channel.channel_id}"
             )
 
-    async def _sync_cbx_live(
+    async def _sync_external_live(
         self,
         session: Session,
     ) -> None:
-        """Sync title, description, cover to CBX Live platform.
+        """Sync title, description, cover to External Live platform.
 
         Always sends all fields (title, description, cover) from the session,
         not just the changed ones.
         """
         config = get_app_environ_config()
-        if not config.CBX_LIVE_BASE_URL:
-            logger.debug("CBX_LIVE_BASE_URL not configured, skipping CBX sync")
+        if not config.EXTERNAL_LIVE_BASE_URL:
+            logger.debug("EXTERNAL_LIVE_BASE_URL not configured, skipping External Live sync")
             return
 
         post_id = session.runtime.post_id if session.runtime else None
         if not post_id:
-            logger.debug(f"No post_id for session {session.session_id}, skipping CBX sync")
+            logger.debug(f"No post_id for session {session.session_id}, skipping External Live sync")
             return
 
         try:
-            client = CbxLiveClient(
-                base_url=config.CBX_LIVE_BASE_URL,
-                api_key=config.CBX_LIVE_API_KEY,
+            client = ExternalLiveClient(
+                base_url=config.EXTERNAL_LIVE_BASE_URL,
+                api_key=config.EXTERNAL_LIVE_API_KEY,
             )
 
             # Log session data before creating body
             logger.debug(
-                f"Session data before CBX sync - session_id={session.session_id}, "
+                f"Session data before External Live sync - session_id={session.session_id}, "
                 f"title={session.title!r}, description={session.description!r}, "
                 f"cover={session.cover!r}"
             )
@@ -641,15 +641,15 @@ class SessionOperations(BaseService):
             # Log the serialized body that will be sent
             serialized_body = body.model_dump(exclude_none=True)
             logger.info(
-                f"📤 Calling CBX admin/live/update for session {session.session_id}, "
+                f"📤 Calling External Live admin/live/update for session {session.session_id}, "
                 f"post_id={post_id}, body={serialized_body}"
             )
             await client.admin_update_live(body)
-            logger.info(f"✅ CBX update_live completed for post_id: {post_id}")
+            logger.info(f"✅ External Live update_live completed for post_id: {post_id}")
 
         except Exception as e:
             # Log error but don't fail the session update
             logger.error(
-                f"Failed to sync session {session.session_id} to CBX Live: {e}",
+                f"Failed to sync session {session.session_id} to External Live: {e}",
                 exc_info=True,
             )

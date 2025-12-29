@@ -46,10 +46,10 @@ from app.api.webhooks.schemas.livekit import (
     TrackPublishedEvent,
     TrackUnpublishedEvent,
 )
-from app.cw.api.utils import ApiFailure, ApiSuccess, api_failure
+from app.shared.api.utils import ApiFailure, ApiSuccess, api_failure
 from app.domain.live.session.session_domain import SessionService
 from app.schemas import SessionState
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.utils.app_errors import AppError, AppErrorCode
 
 router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
@@ -129,7 +129,7 @@ async def handle_room_finished(event: RoomFinishedEvent) -> dict[str, Any]:
             )
         else:
             # Other states (IDLE, LIVE, ABORTED) -> ABORTED -> STOPPED
-            with contextlib.suppress(FlcError):
+            with contextlib.suppress(AppError):
                 # May already be in ABORTED state, continue to STOPPED
                 await service.update_session_state(
                     session_id=session.session_id,
@@ -144,9 +144,9 @@ async def handle_room_finished(event: RoomFinishedEvent) -> dict[str, Any]:
                 f"(room deleted unexpectedly)"
             )
 
-    except FlcError as e:
+    except AppError as e:
         # E_SESSION_NOT_FOUND is expected when session is already closed via end_live
-        if e.errcode == FlcErrorCode.E_SESSION_NOT_FOUND:
+        if e.errcode == AppErrorCode.E_SESSION_NOT_FOUND:
             logger.warning(f"Session already closed on room finish: {e}")
         else:
             logger.exception(f"Failed to update session state on room finish: {e}")
@@ -236,8 +236,8 @@ async def handle_participant_joined(event: ParticipantJoinedEvent) -> dict[str, 
                 f"Session {session.session_id} already in state {session.status}, not transitioning"
             )
 
-    except FlcError as e:
-        if e.errcode == FlcErrorCode.E_SESSION_NOT_FOUND:
+    except AppError as e:
+        if e.errcode == AppErrorCode.E_SESSION_NOT_FOUND:
             logger.warning(f"Session not found on participant join: {e}")
         else:
             logger.exception(f"Failed to update session state on participant join: {e}")
@@ -324,8 +324,8 @@ async def handle_participant_left(event: ParticipantLeftEvent) -> dict[str, Any]
             "cleanup_task_id": task.id,
         }
 
-    except FlcError as e:
-        if e.errcode == FlcErrorCode.E_SESSION_NOT_FOUND:
+    except AppError as e:
+        if e.errcode == AppErrorCode.E_SESSION_NOT_FOUND:
             logger.warning(f"Session not found for room {room_id} on participant left")
         else:
             logger.exception(f"Failed to handle participant left: {e}")
@@ -469,7 +469,7 @@ async def livekit_webhook(
         except json.JSONDecodeError as exc:
             logger.error(f"Invalid JSON in webhook body: {exc}")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_INVALID_JSON,
+                errcode=AppErrorCode.E_WEBHOOK_INVALID_JSON,
                 errmesg=f"Invalid JSON: {exc!s}",
             )
             return failure
@@ -479,7 +479,7 @@ async def livekit_webhook(
         if not event_type:
             logger.error("Missing 'event' field in webhook payload")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_MISSING_EVENT_TYPE,
+                errcode=AppErrorCode.E_WEBHOOK_MISSING_EVENT_TYPE,
                 errmesg="Missing 'event' field",
             )
             return failure
@@ -547,7 +547,7 @@ async def livekit_webhook(
             logger.error(f"Failed to parse {event_type} event: {exc}")
             logger.error(f"❌ VALIDATION ERROR: {exc}")
             failure = api_failure(
-                errcode=FlcErrorCode.E_WEBHOOK_VALIDATION_ERROR,
+                errcode=AppErrorCode.E_WEBHOOK_VALIDATION_ERROR,
                 errmesg=f"Failed to parse event: {exc!s}",
             )
             return failure
@@ -559,7 +559,7 @@ async def livekit_webhook(
     except Exception as exc:
         logger.exception("Error processing LiveKit webhook")
         failure = api_failure(
-            errcode=FlcErrorCode.E_WEBHOOK_ERROR,
+            errcode=AppErrorCode.E_WEBHOOK_ERROR,
             errmesg=str(exc),
         )
         return failure

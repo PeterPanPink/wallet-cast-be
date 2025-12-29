@@ -4,11 +4,11 @@ from dataclasses import dataclass, field
 
 from loguru import logger
 
-from app.cw.api.utils import init_logger
-from app.cw.config import custom_config
-from app.cw.storage.mongo import get_mongo_client, get_mongo_manager
-from app.cw.storage.redis import get_redis_client, get_redis_manager
-from app.cw.worker import WorkerData
+from app.shared.api.utils import init_logger
+from app.shared.config import custom_config
+from app.shared.storage.mongo import get_mongo_client, get_mongo_manager
+from app.shared.storage.redis import get_redis_client, get_redis_manager
+from app.shared.worker import WorkerData
 
 redis_manager = get_redis_manager()
 redis_info = get_redis_manager().get_connection_info()

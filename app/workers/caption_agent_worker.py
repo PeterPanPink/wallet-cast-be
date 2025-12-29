@@ -14,9 +14,9 @@ from typing import Any
 from loguru import logger
 from streaq import Worker
 
-from app.cw.api.utils import init_logger
-from app.cw.storage.redis import get_redis_client, get_redis_manager
-from app.cw.worker import WorkerData
+from app.shared.api.utils import init_logger
+from app.shared.storage.redis import get_redis_client, get_redis_manager
+from app.shared.worker import WorkerData
 from app.domain.livekit_agents.caption_agent import (
     CaptionAgentParams,
     CaptionAgentService,

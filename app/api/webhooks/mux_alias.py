@@ -6,7 +6,7 @@ This provides a versioned API path that forwards to the main webhook handler.
 from fastapi import APIRouter, Header, Request
 
 from app.api.webhooks.mux import MuxWebhookSuccess, mux_webhook
-from app.cw.api.utils import ApiFailure
+from app.shared.api.utils import ApiFailure
 
 router = APIRouter(prefix="/live/webhooks", tags=["Webhooks"])
 

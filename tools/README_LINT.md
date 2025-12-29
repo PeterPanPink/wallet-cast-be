@@ -15,13 +15,13 @@ chmod +x tools/code_lint.py
 
 ## Current Rules
 
-### FLC001: Only FlcError Should Be Raised
+### FLC001: Only AppError Should Be Raised
 
-Ensures that only `FlcError` exceptions are raised in application code. This rule enforces consistent error handling across the codebase.
+Ensures that only `AppError` exceptions are raised in application code. This rule enforces consistent error handling across the codebase.
 
 **Allowed:**
 
-- `FlcError` (our custom error class)
+- `AppError` (our custom error class)
 
 **Not allowed:**
 
@@ -29,7 +29,7 @@ Ensures that only `FlcError` exceptions are raised in application code. This rul
 - FastAPI/Pydantic exceptions: `HTTPException`, `ValidationError`, `RequestValidationError`
 - Any other exception types
 
-All business logic errors should be raised as `FlcError` with appropriate error codes from `FlcErrorCode`.
+All business logic errors should be raised as `AppError` with appropriate error codes from `AppErrorCode`.
 
 ## Adding New Rules
 
@@ -89,7 +89,7 @@ The linter automatically ignores:
 - `__pycache__`
 - `.pytest_cache`
 - `.git`
-- `app/cw` (read-only shared library)
+- `app/shared` (read-only shared library)
 
 To modify ignored directories, edit the `ignored_dirs` set in `CodeLinter.get_python_files()`.
 

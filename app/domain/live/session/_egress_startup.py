@@ -2,7 +2,7 @@
 
 This module handles the delayed check after a live stream starts publishing.
 When a stream transitions to PUBLISHING state, we periodically check if Mux
-reports the stream as active, then transition to LIVE and notify CBX.
+reports the stream as active, then transition to LIVE and notify External Live.
 """
 
 from __future__ import annotations
@@ -14,15 +14,15 @@ from loguru import logger
 
 from app.app_config import get_app_environ_config
 from app.schemas import Channel, Session, SessionState
-from app.services.cbx_live.cbx_live_client import CbxLiveClient
-from app.services.cbx_live.cbx_live_schemas import (
+from app.services.integrations.external_live.external_live_client import ExternalLiveClient
+from app.services.integrations.external_live.external_live_schemas import (
     AdminStartLiveBody,
-    CbxLiveApiSuccess,
+    ExternalLiveApiSuccess,
     ChannelConfig,
     SessionConfig,
 )
-from app.services.cw_mux import mux_service
-from app.utils.flc_errors import FlcError, FlcErrorCode
+from app.services.integrations.mux_service import mux_service
+from app.utils.app_errors import AppError, AppErrorCode
 
 # Default delay before first check (in seconds)
 DEFAULT_STARTUP_DELAY_SECONDS = 30
@@ -34,24 +34,24 @@ MAX_RETRIES = 10
 RETRY_DELAY_SECONDS = 30
 
 
-def _get_cbx_live_client() -> CbxLiveClient | None:
-    """Get CBX Live client if configured."""
+def _get_external_live_client() -> ExternalLiveClient | None:
+    """Get External Live client if configured."""
     config = get_app_environ_config()
-    if not config.CBX_LIVE_BASE_URL:
-        logger.debug("CBX_LIVE_BASE_URL not configured, skipping CBX integration")
+    if not config.EXTERNAL_LIVE_BASE_URL:
+        logger.debug("EXTERNAL_LIVE_BASE_URL not configured, skipping External Live integration")
         return None
-    logger.debug(f"Initializing CBX Live client: base_url={config.CBX_LIVE_BASE_URL}")
-    return CbxLiveClient(
-        base_url=config.CBX_LIVE_BASE_URL,
-        api_key=config.CBX_LIVE_API_KEY,
+    logger.debug(f"Initializing External Live client: base_url={config.EXTERNAL_LIVE_BASE_URL}")
+    return ExternalLiveClient(
+        base_url=config.EXTERNAL_LIVE_BASE_URL,
+        api_key=config.EXTERNAL_LIVE_API_KEY,
     )
 
 
-async def _call_cbx_start_live(
+async def _call_external_live_start_live(
     session: Session,
     channel: Channel,
 ) -> str | None:
-    """Call CBX Live admin/live/start endpoint.
+    """Call External Live admin/live/start endpoint.
 
     Args:
         session: Session document with config containing Mux info
@@ -60,17 +60,17 @@ async def _call_cbx_start_live(
     Returns:
         post_id from response if successful, None otherwise
     """
-    client = _get_cbx_live_client()
+    client = _get_external_live_client()
     if not client:
-        # Generate mock post_id when cbx-live is not available
+        # Generate mock post_id when external-live is not available
         mock_post_id = f"mock_{uuid.uuid4().hex[:16]}"
-        logger.info(f"🔧 CBX Live not configured, using mock post_id: {mock_post_id}")
+        logger.info(f"🔧 External Live not configured, using mock post_id: {mock_post_id}")
         return mock_post_id
 
     # Check if post_id already exists
     if session.runtime.post_id:
         logger.info(
-            f"⏭️  CBX start_live already called for session {session.session_id}, "
+            f"⏭️  External Live start_live already called for session {session.session_id}, "
             f"post_id={session.runtime.post_id}, skipping"
         )
         return session.runtime.post_id
@@ -93,7 +93,7 @@ async def _call_cbx_start_live(
         )
 
         logger.debug(
-            f"Extracted session config for CBX start_live: "
+            f"Extracted session config for External Live start_live: "
             f"session_id={session.session_id}, user_id={session.user_id}, "
             f"channel_id={session.channel_id}, mux_stream_id={mux_stream_id}, "
             f"mux_rtmp_ingest_url={mux_rtmp_ingest_url}, live_playback_url={live_playback_url}"
@@ -121,22 +121,22 @@ async def _call_cbx_start_live(
             ),
         )
 
-        logger.info(f"📤 Calling CBX admin/live/start for session {session.session_id}")
-        logger.debug(f"CBX start_live request body: {body.model_dump_json(indent=2)}")
+        logger.info(f"📤 Calling External Live admin/live/start for session {session.session_id}")
+        logger.debug(f"External Live start_live request body: {body.model_dump_json(indent=2)}")
         response = await client.admin_start_live(body)
 
-        if not isinstance(response.root, CbxLiveApiSuccess):
-            raise FlcError(
-                errcode=FlcErrorCode.E_CBX_LIVE_ERROR,
-                errmesg=f"CBX admin/live/start failed: {response.root.errmesg}",
+        if not isinstance(response.root, ExternalLiveApiSuccess):
+            raise AppError(
+                errcode=AppErrorCode.E_EXTERNAL_LIVE_ERROR,
+                errmesg=f"External Live admin/live/start failed: {response.root.errmesg}",
             )
 
         post_id = response.root.results.post_id
-        logger.info(f"✅ CBX start_live returned post_id: {post_id}")
+        logger.info(f"✅ External Live start_live returned post_id: {post_id}")
         return post_id
 
     except Exception as e:
-        logger.exception(f"Failed to call CBX admin/live/start: {e}")
+        logger.exception(f"Failed to call External Live admin/live/start: {e}")
         raise
 
 
@@ -274,7 +274,7 @@ async def delayed_stream_startup_check(
     This task:
     1. Waits for the initial delay
     2. Checks if the Mux live stream is active
-    3. If active, updates session with DVR URLs, transitions to LIVE, and notifies CBX Live
+    3. If active, updates session with DVR URLs, transitions to LIVE, and notifies External Live
     4. If not active, retries up to max_retries times with retry_delay between checks
 
     Args:
@@ -339,7 +339,7 @@ async def delayed_stream_startup_check(
                         logger.error(f"Failed to update session {session_id} with DVR URLs")
                         return
 
-                    # Step 5: Call CBX admin/live/start BEFORE transitioning to LIVE
+                    # Step 5: Call External Live admin/live/start BEFORE transitioning to LIVE
                     channel = await Channel.find_one(Channel.channel_id == session.channel_id)
                     if not channel:
                         logger.warning(
@@ -348,18 +348,18 @@ async def delayed_stream_startup_check(
                         )
                         return
 
-                    cbx_post_id = await _call_cbx_start_live(session, channel)
-                    if cbx_post_id:
+                    external_live_post_id = await _call_external_live_start_live(session, channel)
+                    if external_live_post_id:
                         # Store post_id in session config for later stop_live call
-                        session.runtime.post_id = cbx_post_id
+                        session.runtime.post_id = external_live_post_id
                         await session.partial_update_session_with_version_check(
                             {Session.runtime.post_id: session.runtime.post_id},
                             max_retry_on_conflicts=2,
                         )
 
                         logger.info(
-                            f"✅ CBX start_live completed for session {session_id}, "
-                            f"post_id={cbx_post_id}"
+                            f"✅ External Live start_live completed for session {session_id}, "
+                            f"post_id={external_live_post_id}"
                         )
 
                     # Step 6: Transition session to LIVE

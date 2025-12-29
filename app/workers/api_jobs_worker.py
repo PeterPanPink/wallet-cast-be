@@ -11,8 +11,8 @@ from typing import Any
 from loguru import logger
 from streaq import Worker
 
-from app.cw.api.utils import init_logger
-from app.cw.storage.redis import get_redis_client
+from app.shared.api.utils import init_logger
+from app.shared.storage.redis import get_redis_client
 from app.domain.livekit_agents.caption_agent.service import initialize_beanie_for_worker
 from app.workers.base import QUEUE_KEY, queue_url, redis_major_label
 from app.workers.keda_metrics import collect_and_publish_metrics
@@ -62,9 +62,9 @@ async def cleanup_session_after_host_left(session_id: str) -> dict[str, Any]:
     """
     from app.domain.live.session.session_domain import SessionService
     from app.schemas import Session, SessionState
-    from app.services.cw_livekit import livekit_service
-    from app.services.cw_mux import mux_service
-    from app.utils.flc_errors import FlcError, FlcErrorCode
+    from app.services.integrations.livekit_service import livekit_service
+    from app.services.integrations.mux_service import mux_service
+    from app.utils.app_errors import AppError, AppErrorCode
 
     logger.info(f"🧹 Running cleanup for session {session_id} after host left")
 
@@ -126,14 +126,14 @@ async def cleanup_session_after_host_left(session_id: str) -> dict[str, Any]:
         try:
             await service.delete_room(room_name=session.room_id)
             logger.info(f"✅ Deleted LiveKit room {session.room_id}")
-        except FlcError as e:
-            if e.errcode == FlcErrorCode.E_SESSION_NOT_FOUND:
+        except AppError as e:
+            if e.errcode == AppErrorCode.E_SESSION_NOT_FOUND:
                 logger.warning(f"Room {session.room_id} already deleted")
             else:
                 raise
 
         # Transition session state: current -> ABORTED -> STOPPED
-        with contextlib.suppress(FlcError):
+        with contextlib.suppress(AppError):
             await service.update_session_state(
                 session_id=session_id,
                 new_state=SessionState.ABORTED,

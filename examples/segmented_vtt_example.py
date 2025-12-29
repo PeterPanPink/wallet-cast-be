@@ -21,7 +21,7 @@ async def fetch_caption_playlist(session_id: str, language: str | None = None):
         M3U8 playlist content as string
     """
     base_url = "http://localhost:8000/api/v1"
-    url = f"{base_url}/flc/session/egress/caption/{session_id}/captions.m3u8"
+    url = f"{base_url}/session/egress/caption/{session_id}/captions.m3u8"
 
     params = {}
     if language:
@@ -45,7 +45,7 @@ async def fetch_caption_segment(session_id: str, segment_num: int, language: str
         VTT segment content as string
     """
     base_url = "http://localhost:8000/api/v1"
-    url = f"{base_url}/flc/session/egress/caption/{session_id}/captions-{segment_num}.vtt"
+    url = f"{base_url}/session/egress/caption/{session_id}/captions-{segment_num}.vtt"
 
     params = {}
     if language:
@@ -203,7 +203,7 @@ async def example_html5_video_integration():
         <!-- Original captions -->
         <track
             kind="subtitles"
-            src="http://localhost:8000/api/v1/flc/session/egress/caption/{session_id}/captions.m3u8"
+            src="http://localhost:8000/api/v1/session/egress/caption/{session_id}/captions.m3u8"
             srclang="en"
             label="English"
             default>
@@ -211,14 +211,14 @@ async def example_html5_video_integration():
         <!-- Spanish captions -->
         <track
             kind="subtitles"
-            src="http://localhost:8000/api/v1/flc/session/egress/caption/{session_id}/captions.m3u8?language=es"
+            src="http://localhost:8000/api/v1/session/egress/caption/{session_id}/captions.m3u8?language=es"
             srclang="es"
             label="Español">
 
         <!-- French captions -->
         <track
             kind="subtitles"
-            src="http://localhost:8000/api/v1/flc/session/egress/caption/{session_id}/captions.m3u8?language=fr"
+            src="http://localhost:8000/api/v1/session/egress/caption/{session_id}/captions.m3u8?language=fr"
             srclang="fr"
             label="Français">
     </video>

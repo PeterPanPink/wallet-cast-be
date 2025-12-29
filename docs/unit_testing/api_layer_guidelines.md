@@ -23,7 +23,7 @@ Tests for FastAPI endpoints located in `app/api/`. These tests verify that your 
 If your endpoint requires authentication, you can override the `get_current_user` dependency.
 
 ```python
-from app.api.flc.dependency import get_current_user
+from app.api.v1.dependency import get_current_user
 
 # In your test or fixture
 app.dependency_overrides[get_current_user] = lambda: {"user_id": "test_user", "role": "admin"}

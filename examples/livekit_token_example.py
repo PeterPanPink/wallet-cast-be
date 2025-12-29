@@ -16,7 +16,7 @@ Run:
 
 import asyncio
 
-from app.services.cw_livekit import livekit_service
+from app.services.integrations.livekit_service import livekit_service
 
 
 async def main():

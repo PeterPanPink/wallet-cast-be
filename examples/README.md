@@ -76,8 +76,8 @@ To use the RTC provider wrapper in your API endpoints:
 
 ```python
 from fastapi import APIRouter
-from app.services.cw_livekit import livekit_service
-from app.cw.api.utils import ApiSuccess, ApiFailure
+from app.services.integrations.livekit_service import livekit_service
+from app.shared.api.utils import ApiSuccess, ApiFailure
 
 router = APIRouter()
 

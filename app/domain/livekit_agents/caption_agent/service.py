@@ -15,8 +15,8 @@ from livekit.agents import AgentServer, AutoSubscribe, JobContext
 from loguru import logger
 from pydantic import BaseModel, Field
 
-from app.cw.storage.mongo import get_mongo_client
-from app.cw.storage.redis import get_redis_client
+from app.shared.storage.mongo import get_mongo_client
+from app.shared.storage.redis import get_redis_client
 from app.domain.livekit_agents.caption_agent.delivery.s3_uploader import CaptionS3Uploader
 from app.domain.livekit_agents.caption_agent.orchestrator import (
     build_caption_engine,
@@ -25,7 +25,7 @@ from app.domain.livekit_agents.caption_agent.orchestrator import (
 from app.domain.livekit_agents.caption_agent.stt.config import SpeakerSttConfig
 from app.schemas import Session
 from app.schemas.init import init_beanie_odm
-from app.services.cw_livekit import livekit_service
+from app.services.integrations.livekit_service import livekit_service
 
 CAPTION_AGENT_NAME = "caption-agent"
 FLC_MONGO_LABEL = "flc_primary"

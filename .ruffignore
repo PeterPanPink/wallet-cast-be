@@ -1,6 +1,6 @@
 # Ruff ignore patterns
 # Shared library - read-only
-app/cw/
+app/shared/
 
 # Build artifacts
 build/
