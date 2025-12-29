@@ -1,0 +1,26 @@
+# Ruff ignore patterns
+# Shared library - read-only
+app/cw/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Cache directories
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Coverage reports
+htmlcov/
+.coverage
+
+# Docker
+docker-entry.sh

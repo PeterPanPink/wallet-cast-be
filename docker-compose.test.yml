@@ -1,0 +1,112 @@
+name: wallet-cast-demo-test
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    # Demo-safe: reference placeholders only
+    env_file:
+      - env.example
+    environment:
+      # Unit test mode: "coverage", "fast", or "" (default)
+      - UNIT_TEST_MODE=${UNIT_TEST_MODE:-}
+
+    volumes:
+      # Mount source code for live testing
+      - ./app:/cw_app/app:ro
+      - ./tests:/cw_app/tests:ro
+
+      # Mount coverage output directory (if needed)
+      # - ./coverage:/cw_app/coverage
+      # - ./htmlcov:/cw_app/htmlcov
+
+    # Keep container running for interactive testing
+    stdin_open: true
+    tty: true
+
+    # Network isolation for tests
+    networks:
+      - test-network
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+
+  # postgres:
+  #   image: postgres:15-alpine
+  #   environment:
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #     - POSTGRES_DB=test_db
+  #   volumes:
+  #     - postgres-test-data:/var/lib/postgresql/data
+  #   networks:
+  #     - test-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+
+  redis:
+    image: redis:7-alpine
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:7
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+    networks:
+      - test-network
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    tmpfs:
+      - /data/db # Use tmpfs for faster test database (data not persisted)
+
+  mongo-init:
+    image: mongo:7
+    networks:
+      - test-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        until mongosh --quiet "mongodb://<redacted-host>:27017/admin" --eval "db.runCommand({ ping: 1 })" >/dev/null 2>&1; do
+          sleep 1
+        done
+        mongosh --quiet "mongodb://<redacted-host>:27017/admin" --eval 'try { rs.status(); } catch (err) { if (err.codeName === "NotYetInitialized") { rs.initiate({_id: "rs0", members: [{ _id: 0, host: "<redacted-host>:27017"}]}); } else { throw err; } }'
+        # Wait for primary election
+        until mongosh --quiet "mongodb://<redacted-host>:27017/admin?replicaSet=rs0" --eval "rs.isMaster().ismaster" | grep -q "true"; do
+          sleep 1
+        done
+        echo "MongoDB replica set initialized"
+    restart: "no"
+
+# volumes:
+#   postgres-test-data:
+#     driver: local
+
+networks:
+  test-network:
+    driver: bridge

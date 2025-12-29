@@ -1,0 +1,161 @@
+[project]
+name = "wallet-cast-demo"
+version = "0.1.0"
+description = "WalletCast Demo Backend (sanitized showcase)"
+# NOTE: Authors removed for public showcase (avoid personal/company identifiers).
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.119.0",
+    "loguru>=0.7.3",
+    "motor>=3.6.0",
+    "beanie>=1.27.0",
+    "orjson>=3.10.12",
+    "httpx[http2]>=0.28.1",
+    "redis>=5.2.1",
+    "hiredis>=3.1.0",
+    "arq>=0.26.3",
+    "streaq>=5.2.2",
+    "pyyaml>=6.0.2",
+    "granian[reload]>=2.5.0",
+    "logfire[fastapi,httpx,pymongo,redis]>=4.3.5",
+    "python-dotenv>=1.1.1",
+    "pydantic>=2.6",
+    "pydantic-core>=2.20",
+    "asyncpg>=0.30.0",
+    "python-ulid>=3.1.0",
+    "aiohttp>=3.9.0",
+    "slowapi>=0.1.9",
+    "fastapi-cache2>=0.2.2",
+    "uvloop>=0.22.1",
+    "glom>=24.11.0",
+    "mmh3>=5.2.0",
+    "itsdangerous>=2.2.0",
+    "flatten-dict>=0.4.2",
+    "aioboto3>=13.3.0",
+    "livekit-api>=0.8.0",
+    "livekit-agents>=0.12.0",
+    "livekit-plugins-openai>=0.9.0",
+    "livekit-plugins-silero>=0.8.0",
+    "mux-python",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "mongomock-motor>=0.0.36",
+    "pytest-cov>=6.2.1",
+    "fakeredis>=2.31.0",
+    "jinja2>=3.1.3",
+    "python-multipart>=0.0.9",
+    "ruff>=0.14.8",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.coverage.run]
+omit = ["app/cw/*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
+]
+filterwarnings = [
+    # Ignore Pydantic deprecation warnings from external libraries only
+    "ignore:Accessing the 'model_fields' attribute on the instance:pydantic.warnings.PydanticDeprecatedSince211:lazy_model.*",
+    "ignore:Accessing the 'model_fields' attribute on the instance:pydantic.warnings.PydanticDeprecatedSince211:beanie.*",
+]
+
+[tool.uv.sources]
+mux-python = { git = "https://github.com/muxinc/mux-python.git" }
+
+[tool.ruff]
+# Target Python 3.9+ for demo portability
+target-version = "py39"
+
+# Exclude common directories
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "app/cw",         # Read-only shared library
+]
+
+# Line length
+line-length = 100
+
+[tool.ruff.lint]
+# Enable recommended rules
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    "E501",   # Line too long (handled by formatter)
+    "SIM108", # Use ternary operator (sometimes less readable)
+    "B008",   # Do not perform function calls in argument defaults (false positives with Pydantic)
+    "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
+    "SIM102", # Use a single `if` statement instead of nested `if` statements
+    "C408",   # Unnecessary `dict()` call (rewrite as a literal)
+    "SIM118", # Use `key in dict` instead of `key in dict.keys()`
+    "RUF100", # Unused `noqa` directive
+    "UP017",  # Use `datetime.UTC` alias
+]
+
+# Allow autofix for all enabled rules
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+# Sort imports
+known-first-party = ["app"]
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+[tool.ruff.format]
+# Use double quotes
+quote-style = "double"
+# Use spaces for indentation
+indent-style = "space"
+# Respect magic trailing comma
+skip-magic-trailing-comma = false
+# Unix line endings
+line-ending = "lf"

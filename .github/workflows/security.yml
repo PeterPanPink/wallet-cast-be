@@ -1,0 +1,31 @@
+name: security-scan
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  redaction-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Redaction scan
+        run: python tools/redaction_scan.py
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run gitleaks (best-effort)
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+

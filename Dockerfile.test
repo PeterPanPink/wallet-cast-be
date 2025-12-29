@@ -1,0 +1,47 @@
+# Test Dockerfile with all dependencies (including dev) for running tests
+FROM python:3.13-slim
+
+WORKDIR /cw_app
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Set uv environment variables
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    UV_PYTHON_DOWNLOADS=never
+
+# Copy dependency files first for better layer caching
+COPY pyproject.toml uv.lock README.md ./
+
+# Install ALL dependencies including dev group (pytest, coverage, etc.)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project
+
+# Set up virtual environment. Works like `source .venv/bin/activate`
+ENV PATH="/cw_app/.venv/bin:$PATH"
+
+# Copy application and test code
+COPY app ./app
+COPY tests ./tests
+
+# Create directories for coverage output
+RUN mkdir -p coverage htmlcov
+
+# UNIT_TEST_MODE options:
+# - "coverage": Full test suite with coverage reporting
+# - "fast": Quick debug mode (maxfail=5, minimal output)
+# - "" (empty/default): Standard test run with verbose output
+ENV UNIT_TEST_MODE=""
+
+CMD ["sh", "-c", "\
+    if [ \"$UNIT_TEST_MODE\" = \"coverage\" ]; then \
+        echo '🚀 Running tests with full coverage (excluding integration tests)...' && \
+        pytest tests/ -v --tb=short -m 'not integration' -W error --cov=app --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage/coverage.xml; \
+    elif [ \"$UNIT_TEST_MODE\" = \"fast\" ]; then \
+        echo '⚡ Running fast debug tests with maxfail=5 (excluding integration tests)...' && \
+        pytest -q --maxfail=5 -W error -m 'not integration' tests/; \
+    else \
+        echo '🧪 Running standard tests (excluding integration tests)...' && \
+        pytest tests/ -v -m 'not integration' -W error; \
+    fi"]

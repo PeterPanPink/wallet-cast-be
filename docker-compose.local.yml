@@ -1,0 +1,301 @@
+# Docker Compose configuration (sanitized showcase)
+name: wallet-cast-demo-local
+
+services:
+  # ============================================================================
+  # Dependencies
+  # ============================================================================
+
+  # Redis for ARQ queue and caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-local-data:/data
+    networks:
+      - local-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    labels:
+      - "type=deps"
+
+  # MongoDB for document storage
+  mongo:
+    image: mongo:7
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-local-data:/data/db
+    networks:
+      - local-network
+    healthcheck:
+      test:
+        ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 })"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "type=deps"
+
+  # MongoDB initializer (idempotent)
+  mongo-init:
+    image: mongo:7
+    networks:
+      - local-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ./tools/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    command:
+      - bash
+      - -lc
+      - |
+        set -euo pipefail
+        until mongosh --quiet "mongodb://<redacted-host>:27017/admin" --eval "db.runCommand({ ping: 1 })" >/dev/null 2>&1; do
+          sleep 1
+        done
+        mongosh --quiet "mongodb://<redacted-host>:27017/admin" --eval 'try { rs.status(); } catch (err) { if (err.codeName === "NotYetInitialized") { rs.initiate({_id: "rs0", members: [{ _id: 0, host: "<redacted-host>:27017"}]}); } else { throw err; } }'
+        # Wait for primary election before applying initialization script
+        until mongosh --quiet "mongodb://<redacted-host>:27017/admin?replicaSet=rs0" --eval "rs.isMaster().ismaster" | grep -q "true"; do
+          sleep 1
+        done
+        mongosh --quiet "mongodb://<redacted-host>:27017/admin?replicaSet=rs0" /docker-entrypoint-initdb.d/init-mongo.js
+    restart: "no"
+    labels:
+      - "type=tools"
+
+  # ============================================================================
+  # Services
+  # ============================================================================
+
+  # Mock core-be service for local development
+  mock-corebe:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    # NOTE: Public demo repo — do NOT commit real env files.
+    # Use `env.example` as a reference, and inject real values via your own environment.
+    env_file:
+      - env.example
+    environment:
+      - MOCK_COREBE_VERIFY_EXP=1761966349
+    ports:
+      - "18080:18080"
+    volumes:
+      - ./app:/cw_app/app:ro
+      - ./tools/mock_corebe.py:/cw_app/tools/mock_corebe.py:ro
+    networks:
+      - local-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command:
+      [
+        "granian",
+        "--interface",
+        "asgi",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "18080",
+        "--workers",
+        "1",
+        "--reload",
+        "tools.mock_corebe:app",
+      ]
+    labels:
+      - "type=service"
+
+  # Mock cbx-live service for local development
+  mock-cbx-live:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    env_file:
+      - env.example
+    ports:
+      - "18081:18081"
+    volumes:
+      - ./app:/cw_app/app:ro
+      - ./tools/mock_cbx_live.py:/cw_app/tools/mock_cbx_live.py:ro
+    networks:
+      - local-network
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command:
+      [
+        "granian",
+        "--interface",
+        "asgi",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "18081",
+        "--workers",
+        "1",
+        "--reload",
+        "tools.mock_cbx_live:app",
+      ]
+    labels:
+      - "type=service"
+
+  # FastAPI Application Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder # Use builder stage for hot-reloading with all dev dependencies
+    env_file:
+      - env.example
+    environment:
+      - RUN_MODE=api
+      - WORKER_NAME=api
+
+      # Override api keys for local testing
+    ports:
+      - "${API_PORT:-8000}:${API_PORT:-8000}"
+    volumes:
+      - ./app:/cw_app/app:ro
+      - ./logs:/cw_app/logs
+    networks:
+      - local-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      mock-corebe:
+        condition: service_started
+      mock-cbx-live:
+        condition: service_started
+    restart: unless-stopped
+    command:
+      [
+        "granian",
+        "--interface",
+        "asgi",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "${API_PORT:-8000}",
+        "--workers",
+        "${API_WORKERS:-1}",
+        "--reload",
+        "app.main:app",
+      ]
+    labels:
+      - "type=service"
+
+  # Streaq Worker for Caption Agent (LiveKit Agents)
+  caption-agent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    env_file:
+      - env.example
+    environment:
+      - RUN_MODE=caption_agent_worker
+    volumes:
+      - ./app:/cw_app/app:ro
+      - ./logs:/cw_app/logs
+    networks:
+      - local-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["streaq", "--workers", "8", "app.workers.caption_agent_worker.worker"]
+    labels:
+      - "type=worker"
+
+  # Streaq Worker for API Jobs
+  api-jobs-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    env_file:
+      - env.example
+    environment:
+      - RUN_MODE=api_jobs_worker
+    volumes:
+      - ./app:/cw_app/app:ro
+      - ./logs:/cw_app/logs
+    networks:
+      - local-network
+    depends_on:
+      mongo:
+        condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["streaq", "--workers", "8", "app.workers.api_jobs_worker.worker"]
+    labels:
+      - "type=worker"
+
+  # ============================================================================
+  # Tools
+  # ============================================================================
+
+  # Database Initializer - Run manually to create tables
+  # Usage: docker compose -f docker-compose.local.yml run --rm database-initializer
+  # database-initializer:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #     target: builder # Use builder stage for consistency with other services
+  #   env_file:
+  #     - env.example
+  #   volumes:
+  #     - ./app:/cw_app/app:ro
+  #     - ./pyproject.toml:/cw_app/pyproject.toml:ro
+  #     - ./uv.lock:/cw_app/uv.lock:ro
+  #     - ./data:/cw_app/data:ro
+  #     - ./tools/init_data.py:/cw_app/tools/init_data.py:ro
+  #   working_dir: /cw_app
+  #   networks:
+  #     - local-network
+  #   command: >
+  #     bash -c "
+  #       echo '️ Initializing database schemas...' &&
+  #       python -m app.domain.schemas &&
+  #       python -m tools.init_data &&
+  #       echo '✅ Database initialization complete'
+  #     "
+  #   profiles:
+  #     - tools
+
+volumes:
+  redis-local-data:
+    driver: local
+  mongo-local-data:
+    driver: local
+
+networks:
+  local-network:
+    driver: bridge
