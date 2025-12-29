@@ -1,8 +1,8 @@
-# FlameCast Backend - AI Agent Instructions
+# AI Agent Instructions
 
 ## 🎯 Project Overview
 
-FlameCast Backend is a Python-based modular system using **FastAPI**, **Beanie (MongoDB)**, **Redis**, and **ARQ** for background jobs. It integrates heavily with **LiveKit** for real-time media processing.
+Cast Backend is a Python-based modular system using **FastAPI**, **Beanie (MongoDB)**, **Redis**, and **ARQ** for background jobs. It integrates heavily with **LiveKit** for real-time media processing.
 
 ## 🚨 Critical Rules (Zero Tolerance)
 
@@ -18,7 +18,7 @@ FlameCast Backend is a Python-based modular system using **FastAPI**, **Beanie (
 
 ### Directory Structure
 
-- `app/api/flc`: Main application API logic (FlameCast).
+- `app/api/flc`: Main application API logic (Cast).
 - `app/cw`: **READ-ONLY** shared core library (Storage, Config, Utils).
 - `app/domain`: Core business logic and domain services (e.g., Session management, Channel operations).
 - `app/services`: External service integrations (LiveKit, Mux, Translator).
